@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Choir Practice Player</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      max-width: 600px;
+      margin: auto;
+      padding: 20px;
+    }
+    div.track {
+      margin-bottom: 15px;
+    }
+    label {
+      display: inline-block;
+      width: 80px;
+    }
+    input[type=range] {
+      width: 200px;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 1rem;
+    }
+    #player, #play-pause {
+      display: none;
+    }
+    #access-denied {
+      color: red;
+      font-weight: bold;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <h1>Choir Practice Tracks</h1>
+
+  <div id="password-gate">
+    <p>Enter password to access the choir tracks:</p>
+    <input type="password" id="password-input" />
+    <button onclick="checkPassword()">Submit</button>
+    <p id="access-denied">Access Denied</p>
+  </div>
+
+  <div id="player"></div>
+  <button id="play-pause">Play / Pause</button>
+
+  <script>
+    const correctPassword = "sing123";
+
+    function checkPassword() {
+      const input = document.getElementById("password-input").value;
+      if (input === correctPassword) {
+        document.getElementById("password-gate").style.display = "none";
+        document.getElementById("player").style.display = "block";
+        document.getElementById("play-pause").style.display = "inline-block";
+        loadAll();
+      } else {
+        document.getElementById("access-denied").style.display = "block";
+      }
+    }
+
+    const tracks = [
+      { name: 'Soprano', url: 'https://drive.google.com/uc?export=download&id=1TjqV4v38RDzi2LQEbHscyp9QA0eO0us1' },
+      { name: 'Alto',    url: 'https://drive.google.com/uc?export=download&id=159dUJT2lvfAZI9awHHqpG77_rM0J1yg2' },
+      { name: 'Tenor',   url: 'https://drive.google.com/uc?export=download&id=1e6wJxkXNsQS0chDbEY30OajBB2XSVdrJ' },
+      { name: 'Bass',    url: 'https://drive.google.com/uc?export=download&id=1H2xyjgXINoASXZA37-NxkNx2opcu9osh' },
+      { name: 'SATB',    url: 'https://drive.google.com/uc?export=download&id=1e8e4aI2JaKnpS7xz3ad9GcpGssUDlofN' }
+    ];
+
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const gainNodes = [];
+    const buffers = [];
+
+    async function loadAll() {
+      for (let i = 0; i < tracks.length; i++) {
+        const resp = await fetch(tracks[i].url);
+        const arr = await resp.arrayBuffer();
+        const buf = await audioCtx.decodeAudioData(arr);
+        buffers[i] = buf;
+        createTrackUI(i, tracks[i].name);
+      }
+    }
+
+    function createTrackUI(i, name) {
+      const div = document.createElement('div');
+      div.className = 'track';
+      div.innerHTML = `
+        <label>${name}</label>
+        <input type="range" min="0" max="2" step="0.01" value="1" id="slider${i}">
+      `;
+      document.getElementById('player').appendChild(div);
+      const gain = audioCtx.createGain();
+      gain.gain.value = 1;
+      gain.connect(audioCtx.destination);
+      gainNodes[i] = gain;
+
+      document.getElementById(`slider${i}`).oninput = e => {
+        gain.gain.value = parseFloat(e.target.value);
+      };
+    }
+
+    let playing = false;
+    let sources = [];
+
+    document.getElementById('play-pause').onclick = () => {
+      if (!playing) {
+        playAll();
+        playing = true;
+      } else {
+        stopAll();
+        playing = false;
+      }
+    };
+
+    function playAll() {
+      sources = [];
+      const t0 = audioCtx.currentTime;
+      buffers.forEach((buf, i) => {
+        const src = audioCtx.createBufferSource();
+        src.buffer = buf;
+        src.connect(gainNodes[i]);
+        src.start(t0);
+        sources.push(src);
+      });
+    }
+
+    function stopAll() {
+      sources.forEach(src => src.stop());
+    }
+  </script>
+</body>
+</html>
