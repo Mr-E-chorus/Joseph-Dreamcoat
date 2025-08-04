@@ -24,7 +24,7 @@
       padding: 10px 20px;
       font-size: 1rem;
     }
-    #player, #play-pause {
+    #player, #play-pause, #track-title, #timer {
       display: none;
     }
     #access-denied {
@@ -32,10 +32,15 @@
       font-weight: bold;
       display: none;
     }
+    #timer {
+      margin-bottom: 15px;
+      font-weight: bold;
+    }
   </style>
 </head>
 <body>
-  <h1>Choir Practice Tracks</h1>
+  <h1 id="track-title">A Tribute to the Armed Forces</h1>
+  <div id="timer">00:00 / 00:00</div>
 
   <div id="password-gate">
     <p>Enter password to access the choir tracks:</p>
@@ -68,6 +73,8 @@
         document.getElementById("password-gate").style.display = "none";
         document.getElementById("player").style.display = "block";
         document.getElementById("play-pause").style.display = "inline-block";
+        document.getElementById("track-title").style.display = "block";
+        document.getElementById("timer").style.display = "block";
         renderTrackSliders();
         loadAll();
       } else {
@@ -112,26 +119,32 @@
 
     let playing = false;
     let sources = [];
+    let startTime = 0;
+    let duration = 0;
+    let interval;
 
     document.getElementById('play-pause').onclick = () => {
       if (!playing) {
         playAll();
         playing = true;
+        interval = setInterval(updateTimer, 500);
       } else {
         stopAll();
         playing = false;
+        clearInterval(interval);
       }
     };
 
     function playAll() {
       sources = [];
-      const t0 = audioCtx.currentTime;
+      startTime = audioCtx.currentTime;
+      duration = Math.max(...buffers.map(buf => buf ? buf.duration : 0));
       buffers.forEach((buf, i) => {
         if (buf) {
           const src = audioCtx.createBufferSource();
           src.buffer = buf;
           src.connect(gainNodes[i]);
-          src.start(t0);
+          src.start(startTime);
           sources.push(src);
         }
       });
@@ -139,6 +152,19 @@
 
     function stopAll() {
       sources.forEach(src => src.stop());
+      clearInterval(interval);
+      updateTimer(true);
+    }
+
+    function updateTimer(reset = false) {
+      const elapsed = reset ? 0 : Math.min(audioCtx.currentTime - startTime, duration);
+      document.getElementById("timer").textContent = `${formatTime(elapsed)} / ${formatTime(duration)}`;
+    }
+
+    function formatTime(seconds) {
+      const min = Math.floor(seconds / 60).toString().padStart(2, '0');
+      const sec = Math.floor(seconds % 60).toString().padStart(2, '0');
+      return `${min}:${sec}`;
     }
   </script>
 </body>
