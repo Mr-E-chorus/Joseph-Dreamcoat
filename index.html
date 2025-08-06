@@ -40,7 +40,7 @@
 </head>
 <body>
   <h1 id="track-title">A Tribute to the Armed Forces</h1>
-  <div id="timer">00:00 / 00:00</div>
+  <div id="timer">Measure --, Beat --</div>
 
   <div id="password-gate">
     <p>Enter password to access the choir tracks:</p>
@@ -61,6 +61,14 @@
       { name: 'Tenor',   url: 'assets/tenor-armed-forces.mp3' },
       { name: 'Bass',    url: 'assets/bass-armed-forces.mp3' },
       { name: 'SATB',    url: 'assets/satb-armed-forces.mp3' }
+    ];
+
+    const tempoMap = [
+      { measure: 0,   beatsPerMeasure: 4, bpm: 96 },   // Pickup (beat 4)
+      { measure: 1,   beatsPerMeasure: 4, bpm: 96 },   // Measures 1–7
+      { measure: 8,   beatsPerMeasure: 4, bpm: 108 },  // Measures 8–82
+      { measure: 83,  beatsPerMeasure: 12, bpm: 108 }, // Measures 83–100, dotted q = 108
+      { measure: 101, beatsPerMeasure: 4, bpm: 96 }    // Measures 101–127
     ];
 
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -137,14 +145,14 @@
 
     function playAll() {
       sources = [];
-      startTime = audioCtx.currentTime;
+      startTime = audioCtx.currentTime - (60 / 96 * 3); // Adjust for pickup (beat 4 only)
       duration = Math.max(...buffers.map(buf => buf ? buf.duration : 0));
       buffers.forEach((buf, i) => {
         if (buf) {
           const src = audioCtx.createBufferSource();
           src.buffer = buf;
           src.connect(gainNodes[i]);
-          src.start(startTime);
+          src.start(audioCtx.currentTime);
           sources.push(src);
         }
       });
@@ -157,14 +165,39 @@
     }
 
     function updateTimer(reset = false) {
-      const elapsed = reset ? 0 : Math.min(audioCtx.currentTime - startTime, duration);
-      document.getElementById("timer").textContent = `${formatTime(elapsed)} / ${formatTime(duration)}`;
+      const elapsed = reset ? 0 : Math.max(0, audioCtx.currentTime - startTime);
+      const position = getMeasureAndBeat(elapsed);
+      document.getElementById("timer").textContent = `Measure ${position.measure}, Beat ${position.beat}`;
     }
 
-    function formatTime(seconds) {
-      const min = Math.floor(seconds / 60).toString().padStart(2, '0');
-      const sec = Math.floor(seconds % 60).toString().padStart(2, '0');
-      return `${min}:${sec}`;
+    function getMeasureAndBeat(seconds) {
+      let currentMeasure = 0;
+      let currentTime = 0;
+
+      for (let i = 0; i < tempoMap.length; i++) {
+        const start = tempoMap[i];
+        const end = tempoMap[i + 1] || { measure: 128 }; // up to last measure
+        const measures = end.measure - start.measure;
+        const secondsPerBeat = 60 / start.bpm;
+        const totalBeats = measures * start.beatsPerMeasure;
+        const segmentDuration = totalBeats * secondsPerBeat;
+
+        if (seconds < currentTime + segmentDuration) {
+          const timeInSegment = seconds - currentTime;
+          const beatsElapsed = timeInSegment / secondsPerBeat;
+          const fullMeasures = Math.floor(beatsElapsed / start.beatsPerMeasure);
+          const beatInMeasure = Math.floor(beatsElapsed % start.beatsPerMeasure) + 1;
+          return {
+            measure: start.measure + fullMeasures,
+            beat: beatInMeasure
+          };
+        }
+
+        currentTime += segmentDuration;
+        currentMeasure = end.measure;
+      }
+
+      return { measure: 127, beat: 1 };
     }
   </script>
 </body>
