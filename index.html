@@ -38,12 +38,32 @@
     }
     #timeline {
       margin: 20px 0;
-      height: 20px;
+      height: 40px;
       background-color: #eee;
       position: relative;
+      overflow-x: auto;
+      white-space: nowrap;
+    }
+    .measure-tick {
+      display: inline-block;
+      height: 100%;
+      width: 30px;
+      position: relative;
+      border-left: 1px solid #ccc;
+      cursor: pointer;
+    }
+    .measure-tick.highlight {
+      background-color: #cde;
+    }
+    .measure-tick span {
+      position: absolute;
+      bottom: 0;
+      left: 2px;
+      font-size: 10px;
     }
     #progress-bar {
       position: absolute;
+      top: 0;
       height: 100%;
       width: 2px;
       background-color: red;
@@ -108,6 +128,7 @@
         document.getElementById("jump-controls").style.display = "block";
         renderTrackSliders();
         loadAll();
+        renderTimeline();
       } else {
         document.getElementById("access-denied").style.display = "block";
       }
@@ -132,6 +153,18 @@
           gain.gain.value = parseFloat(e.target.value);
         };
       });
+    }
+
+    function renderTimeline() {
+      const timeline = document.getElementById("timeline");
+      for (let m = 1; m <= 127; m++) {
+        const tick = document.createElement("div");
+        tick.className = "measure-tick";
+        if (tempoMap.find(t => t.measure === m)) tick.classList.add("highlight");
+        tick.innerHTML = `<span>${m}</span>`;
+        tick.onclick = () => jumpToMeasureDirect(m);
+        timeline.appendChild(tick);
+      }
     }
 
     async function loadAll() {
@@ -249,8 +282,12 @@
     function jumpToMeasure() {
       const measureInput = parseInt(document.getElementById("jump-measure").value);
       if (isNaN(measureInput) || measureInput < 1 || measureInput > 127) return;
+      jumpToMeasureDirect(measureInput);
+    }
+
+    function jumpToMeasureDirect(measureNum) {
       stopAll();
-      offset = getSecondsFromMeasure(measureInput);
+      offset = getSecondsFromMeasure(measureNum);
       playAll(offset);
       playing = true;
       interval = setInterval(updateTimer, 100);
