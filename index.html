@@ -6,7 +6,7 @@
   <style>
     body {
       font-family: sans-serif;
-      max-width: 600px;
+      max-width: 700px;
       margin: auto;
       padding: 20px;
     }
@@ -24,7 +24,7 @@
       padding: 10px 20px;
       font-size: 1rem;
     }
-    #player, #play-pause, #track-title, #timer {
+    #player, #play-pause, #track-title, #timer, #timeline, #jump-controls {
       display: none;
     }
     #access-denied {
@@ -36,11 +36,32 @@
       margin-bottom: 15px;
       font-weight: bold;
     }
+    #timeline {
+      margin: 20px 0;
+      height: 20px;
+      background-color: #eee;
+      position: relative;
+    }
+    #progress-bar {
+      position: absolute;
+      height: 100%;
+      width: 2px;
+      background-color: red;
+    }
+    #jump-controls {
+      margin-bottom: 20px;
+    }
   </style>
 </head>
 <body>
   <h1 id="track-title">A Tribute to the Armed Forces</h1>
   <div id="timer">Measure --, Beat --</div>
+  <div id="jump-controls">
+    <label for="jump-measure">Jump to measure:</label>
+    <input type="number" id="jump-measure" min="1" max="127" />
+    <button onclick="jumpToMeasure()">Go</button>
+  </div>
+  <div id="timeline"><div id="progress-bar"></div></div>
 
   <div id="password-gate">
     <p>Enter password to access the choir tracks:</p>
@@ -64,11 +85,11 @@
     ];
 
     const tempoMap = [
-      { measure: 0,   beatsPerMeasure: 4, bpm: 96 },   // Pickup (beat 4)
-      { measure: 1,   beatsPerMeasure: 4, bpm: 96 },   // Measures 1–7
-      { measure: 8,   beatsPerMeasure: 4, bpm: 108 },  // Measures 8–82
-      { measure: 83,  beatsPerMeasure: 12, bpm: 108 }, // Measures 83–100, dotted q = 108
-      { measure: 101, beatsPerMeasure: 4, bpm: 96 }    // Measures 101–127
+      { measure: 0,   beatsPerMeasure: 4, bpm: 96 },
+      { measure: 1,   beatsPerMeasure: 4, bpm: 96 },
+      { measure: 8,   beatsPerMeasure: 4, bpm: 108 },
+      { measure: 83,  beatsPerMeasure: 12, bpm: 108 },
+      { measure: 101, beatsPerMeasure: 4, bpm: 96 }
     ];
 
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -83,6 +104,8 @@
         document.getElementById("play-pause").style.display = "inline-block";
         document.getElementById("track-title").style.display = "block";
         document.getElementById("timer").style.display = "block";
+        document.getElementById("timeline").style.display = "block";
+        document.getElementById("jump-controls").style.display = "block";
         renderTrackSliders();
         loadAll();
       } else {
@@ -128,6 +151,7 @@
     let playing = false;
     let sources = [];
     let startTime = 0;
+    let offset = 0;
     let duration = 0;
     let interval;
 
@@ -135,7 +159,7 @@
       if (!playing) {
         playAll();
         playing = true;
-        interval = setInterval(updateTimer, 500);
+        interval = setInterval(updateTimer, 100);
       } else {
         stopAll();
         playing = false;
@@ -143,16 +167,16 @@
       }
     };
 
-    function playAll() {
+    function playAll(startFrom = offset) {
       sources = [];
-      startTime = audioCtx.currentTime - (60 / 96 * 3); // Adjust for pickup (beat 4 only)
+      startTime = audioCtx.currentTime - startFrom;
       duration = Math.max(...buffers.map(buf => buf ? buf.duration : 0));
       buffers.forEach((buf, i) => {
         if (buf) {
           const src = audioCtx.createBufferSource();
           src.buffer = buf;
           src.connect(gainNodes[i]);
-          src.start(audioCtx.currentTime);
+          src.start(audioCtx.currentTime, startFrom);
           sources.push(src);
         }
       });
@@ -166,8 +190,11 @@
 
     function updateTimer(reset = false) {
       const elapsed = reset ? 0 : Math.max(0, audioCtx.currentTime - startTime);
+      offset = elapsed;
       const position = getMeasureAndBeat(elapsed);
       document.getElementById("timer").textContent = `Measure ${position.measure}, Beat ${position.beat}`;
+      const progress = Math.min((elapsed / duration) * 100, 100);
+      document.getElementById("progress-bar").style.left = `${progress}%`;
     }
 
     function getMeasureAndBeat(seconds) {
@@ -176,7 +203,7 @@
 
       for (let i = 0; i < tempoMap.length; i++) {
         const start = tempoMap[i];
-        const end = tempoMap[i + 1] || { measure: 128 }; // up to last measure
+        const end = tempoMap[i + 1] || { measure: 128 };
         const measures = end.measure - start.measure;
         const secondsPerBeat = 60 / start.bpm;
         const totalBeats = measures * start.beatsPerMeasure;
@@ -198,6 +225,35 @@
       }
 
       return { measure: 127, beat: 1 };
+    }
+
+    function getSecondsFromMeasure(measureTarget) {
+      let seconds = 0;
+      for (let i = 0; i < tempoMap.length; i++) {
+        const start = tempoMap[i];
+        const end = tempoMap[i + 1] || { measure: 128 };
+        const measuresInSegment = end.measure - start.measure;
+
+        if (measureTarget >= start.measure && measureTarget < end.measure) {
+          const relative = measureTarget - start.measure;
+          const secondsPerBeat = 60 / start.bpm;
+          return seconds + relative * start.beatsPerMeasure * secondsPerBeat;
+        }
+
+        const secondsPerBeat = 60 / start.bpm;
+        seconds += measuresInSegment * start.beatsPerMeasure * secondsPerBeat;
+      }
+      return seconds;
+    }
+
+    function jumpToMeasure() {
+      const measureInput = parseInt(document.getElementById("jump-measure").value);
+      if (isNaN(measureInput) || measureInput < 1 || measureInput > 127) return;
+      stopAll();
+      offset = getSecondsFromMeasure(measureInput);
+      playAll(offset);
+      playing = true;
+      interval = setInterval(updateTimer, 100);
     }
   </script>
 </body>
