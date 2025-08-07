@@ -112,8 +112,125 @@
       { measure: 0, beatsPerMeasure: 3, bpm: 80 }
     ];
 
-    // You would also need to adjust the timer and jump logic to use tempoMap,
-    // similar to how the previous project handled tempo mapping and beats.
+    let audioContext;
+    let sources = [];
+    let gains = [];
+    let startTime = 0;
+    let isPlaying = false;
+    let duration = 0;
+
+    function checkPassword() {
+      const input = document.getElementById("password-input").value;
+      const gate = document.getElementById("password-gate");
+      const denied = document.getElementById("access-denied");
+      if (input === correctPassword) {
+        gate.style.display = "none";
+        document.getElementById("player").style.display = "block";
+        document.getElementById("play-pause").style.display = "inline-block";
+        document.getElementById("track-title").style.display = "block";
+        document.getElementById("timer").style.display = "block";
+        document.getElementById("timeline").style.display = "block";
+        document.getElementById("jump-controls").style.display = "block";
+        initPlayer();
+      } else {
+        denied.style.display = "block";
+      }
+    }
+
+    async function initPlayer() {
+      audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const playerDiv = document.getElementById("player");
+      for (const track of tracks) {
+        const div = document.createElement("div");
+        div.className = "track";
+        const label = document.createElement("label");
+        label.textContent = track.name;
+        const slider = document.createElement("input");
+        slider.type = "range";
+        slider.min = 0;
+        slider.max = 1;
+        slider.step = 0.01;
+        slider.value = 1;
+        div.appendChild(label);
+        div.appendChild(slider);
+        playerDiv.appendChild(div);
+
+        const response = await fetch(track.url);
+        const arrayBuffer = await response.arrayBuffer();
+        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+
+        const gainNode = audioContext.createGain();
+        gainNode.gain.value = slider.value;
+        slider.oninput = () => gainNode.gain.value = slider.value;
+        gains.push({ buffer: audioBuffer, gain: gainNode });
+        duration = Math.max(duration, audioBuffer.duration);
+      }
+      drawTimeline();
+    }
+
+    function playPause() {
+      if (!isPlaying) {
+        startTime = audioContext.currentTime;
+        sources = gains.map(({ buffer, gain }) => {
+          const source = audioContext.createBufferSource();
+          source.buffer = buffer;
+          source.connect(gain).connect(audioContext.destination);
+          source.start();
+          return source;
+        });
+        isPlaying = true;
+        animateProgress();
+      } else {
+        sources.forEach(source => source.stop());
+        isPlaying = false;
+      }
+    }
+
+    function animateProgress() {
+      const bar = document.getElementById("progress-bar");
+      const update = () => {
+        if (!isPlaying) return;
+        const elapsed = audioContext.currentTime - startTime;
+        const totalBeats = elapsed * (tempoMap[0].bpm / 60);
+        const measure = Math.floor(totalBeats / tempoMap[0].beatsPerMeasure);
+        const beat = Math.floor(totalBeats % tempoMap[0].beatsPerMeasure) + 1;
+        document.getElementById("timer").textContent = `Measure ${measure + 1}, Beat ${beat}`;
+        bar.style.left = `${measure * 30}px`;
+        requestAnimationFrame(update);
+      };
+      update();
+    }
+
+    function drawTimeline() {
+      const timeline = document.getElementById("timeline");
+      const totalMeasures = Math.ceil((duration * tempoMap[0].bpm / 60) / tempoMap[0].beatsPerMeasure);
+      for (let i = 0; i < totalMeasures; i++) {
+        const tick = document.createElement("div");
+        tick.className = "measure-tick";
+        tick.innerHTML = `<span>${i + 1}</span>`;
+        tick.onclick = () => jumpToMeasure(i);
+        timeline.appendChild(tick);
+      }
+    }
+
+    function jumpToMeasure() {
+      const measure = parseInt(document.getElementById("jump-measure").value) - 1;
+      if (isNaN(measure) || measure < 0) return;
+      sources.forEach(source => source.stop());
+      const time = (measure * tempoMap[0].beatsPerMeasure) / (tempoMap[0].bpm / 60);
+      startTime = audioContext.currentTime - time;
+      sources = gains.map(({ buffer, gain }) => {
+        const source = audioContext.createBufferSource();
+        source.buffer = buffer;
+        source.connect(gain).connect(audioContext.destination);
+        source.start(0, time);
+        return source;
+      });
+      isPlaying = true;
+      animateProgress();
+    }
+
+    document.getElementById("play-pause").addEventListener("click", playPause);
   </script>
 </body>
 </html>
