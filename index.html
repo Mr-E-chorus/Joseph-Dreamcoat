@@ -36,6 +36,9 @@
     .btn:hover{ background:#f3f4f6; }
     .btn.solo.active { border-color:#2563eb; background:#e0ecff; }
     .btn.mute.active { border-color:#dc2626; background:#ffe2e2; }
+    .badge { font-size: 11px; margin-left:6px; padding:2px 6px; border-radius:6px; vertical-align:middle; }
+    .ok { background:#e8f5e9; color:#166534; border:1px solid #bbf7d0; }
+    .bad { background:#fef2f2; color:#991b1b; border:1px solid #fecaca; }
     /* Password */
     #access-denied { color:#dc2626; font-weight:700; display:none; }
   </style>
@@ -76,9 +79,8 @@
       { name: 'S2',            url: 'assets/S2 Close Every Door.wav' },
       { name: 'Alto',          url: 'assets/Alto Close Every Door.wav' },
       { name: 'Tenor',         url: 'assets/Tenor Close Every Door.wav' },
-      { name: 'Bass',          url: 'assets/Bass Close Every Door.wav' },
-      { name: 'Choir 1',       url: 'assets/Choir 1 Close Every Door.wav' },
-      { name: 'Choir 2',       url: 'assets/Choir 2 Close Every Door.wav' }
+      { name: 'Bass',          url: 'assets/Bass Close Every Door.wav' }
+      // Choir 1 / Choir 2 removed
     ];
 
     const tempoMap = [ { measure: 0, beatsPerMeasure: 3, bpm: 80 } ];
@@ -105,7 +107,6 @@
       if (input === correctPassword) {
         document.getElementById("password-gate").style.display = "none";
         showAuthUI();
-        // Hook buttons immediately
         document.getElementById("play-pause").addEventListener("click", playPause);
         document.getElementById("stop").addEventListener("click", stopAll);
         initPlayer();
@@ -121,7 +122,7 @@
       let loadedCount = 0;
 
       for (const track of tracks) {
-        // Build row UI
+        // Row UI
         const row = document.createElement("div");
         row.className = "track";
         const label = document.createElement("label");
@@ -141,7 +142,7 @@
         row.append(label, sliderWrap, muteBtn, soloBtn);
         playerDiv.appendChild(row);
 
-        // Load audio defensively
+        // Load defensively
         try {
           const resp = await fetch(track.url);
           if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
@@ -155,25 +156,31 @@
           channel.push(ch);
           duration = Math.max(duration, buffer.duration);
 
+          // UI wiring
           slider.addEventListener('input', () => updateMix());
           muteBtn.addEventListener('click', () => { ch.muted = !ch.muted; muteBtn.classList.toggle('active', ch.muted); updateMix(); });
           soloBtn.addEventListener('click', () => { ch.solo = !ch.solo; soloBtn.classList.toggle('active', ch.solo); updateMix(); });
 
+          // Status badge
+          const ok = document.createElement('span');
+          ok.className = 'badge ok';
+          ok.textContent = 'Loaded';
+          label.appendChild(ok);
+
           loadedCount++;
         } catch (e) {
           console.error(`Failed to load "${track.name}" (${track.url}):`, e);
-          // Insert a tiny note so you know which track failed
-          const errNote = document.createElement('small');
-          errNote.textContent = ' (failed to load)';
-          errNote.style.color = '#dc2626';
-          label.appendChild(errNote);
+          const bad = document.createElement('span');
+          bad.className = 'badge bad';
+          bad.textContent = 'Failed';
+          label.appendChild(bad);
         }
       }
 
       drawTimeline();
       updateMix();
 
-      // Enable buttons if at least one track loaded
+      // Enable buttons if something loaded
       const playBtn = document.getElementById("play-pause");
       const stopBtn  = document.getElementById("stop");
       if (loadedCount > 0) {
@@ -202,11 +209,13 @@
     }
 
     async function playPause() {
-      if (channel.length === 0) return; // nothing loaded
+      if (channel.length === 0) return;
       await ensureContext();
 
       const btn = document.getElementById("play-pause");
       if (!isPlaying) {
+        // start/resume
+        if (!Number.isFinite(offset) || offset < 0) offset = 0;
         startTime = audioContext.currentTime - offset;
         sources = channel.map(ch => {
           const src = audioContext.createBufferSource();
@@ -219,8 +228,9 @@
         btn.textContent = "Pause";
         animateProgress();
       } else {
-        // Pause
-        offset = audioContext.currentTime - startTime;
+        // pause
+        const elapsed = audioContext.currentTime - startTime;
+        offset = Number.isFinite(elapsed) ? Math.max(0, elapsed) : 0;
         sources.forEach(src => { try { src.stop(); } catch(_){} });
         sources = [];
         isPlaying = false;
@@ -229,7 +239,6 @@
     }
 
     function stopAll() {
-      // Stop and reset to start
       if (sources && sources.length) sources.forEach(src => { try { src.stop(); } catch(_){} });
       sources = [];
       isPlaying = false;
@@ -270,19 +279,24 @@
     }
 
     function jumpToMeasure() {
-      const m = parseInt(document.getElementById("jump-measure").value);
+      const m = parseInt(document.getElementById("jump-measure").value, 10);
       if (!Number.isFinite(m) || m < 1) return;
       jumpToMeasureIndex(m - 1);
     }
 
     function jumpToMeasureIndex(measureIndex) {
+      if (!Number.isFinite(measureIndex) || measureIndex < 0) return;
       const secondsPerBeat = 60 / tempoMap[0].bpm;
-      const time = measureIndex * tempoMap[0].beatsPerMeasure * secondsPerBeat;
+      const beatsPerMeasure = tempoMap[0].beatsPerMeasure;
+      let time = measureIndex * beatsPerMeasure * secondsPerBeat;
+      if (!Number.isFinite(time) || time < 0) time = 0;
       offset = time;
-      // Restart from new position (acts like play)
-      if (isPlaying) {
+
+      // restart from that position
+      if (isPlaying && sources && sources.length) {
         sources.forEach(src => { try { src.stop(); } catch(_){} });
         sources = [];
+        isPlaying = false;
       }
       playPause();
     }
