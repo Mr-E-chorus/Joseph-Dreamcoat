@@ -6,33 +6,63 @@
   <style>
     body {
       font-family: sans-serif;
-      max-width: 750px;
+      max-width: 700px;
       margin: auto;
       padding: 20px;
     }
-    .track {
+    div.track {
       display: flex;
       align-items: center;
-      gap: 10px;
-      margin-bottom: 10px;
+      justify-content: space-between;
+      margin-bottom: 15px;
     }
-    .track label {
+    label {
       flex: 0 0 120px;
-      font-weight: bold;
+      text-align: left;
     }
-    .track input[type=range] {
+    input[type=range] {
       flex: 1;
-    }
-    .track button {
-      padding: 5px 10px;
-      font-size: 0.9rem;
+      margin: 0 10px;
     }
     button {
-      padding: 10px 20px;
+      padding: 8px 14px;
       font-size: 1rem;
-      margin-right: 10px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
     }
-    #player, #play-pause, #stop, #track-title, #timer, #timeline, #jump-controls {
+    button:hover {
+      opacity: 0.9;
+    }
+    #play-pause {
+      background-color: #4CAF50;
+      color: white;
+      font-size: 1.2rem;
+      padding: 12px 24px;
+      margin: 5px;
+    }
+    #stop {
+      background-color: #f44336;
+      color: white;
+      font-size: 1.2rem;
+      padding: 12px 24px;
+      margin: 5px;
+    }
+    #main-controls {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .solo-btn {
+      background-color: #2196F3;
+      color: white;
+      margin-left: 5px;
+    }
+    .mute-btn {
+      background-color: #ff9800;
+      color: white;
+      margin-left: 5px;
+    }
+    #player, #track-title, #timer, #timeline, #jump-controls, #main-controls {
       display: none;
     }
     #access-denied {
@@ -43,6 +73,7 @@
     #timer {
       margin-bottom: 15px;
       font-weight: bold;
+      text-align: center;
     }
     #timeline {
       margin: 20px 0;
@@ -78,12 +109,19 @@
     }
     #jump-controls {
       margin-bottom: 20px;
+      text-align: center;
     }
   </style>
 </head>
 <body>
   <h1 id="track-title">Close Every Door</h1>
   <div id="timer">Measure --, Beat --</div>
+
+  <div id="main-controls">
+    <button id="play-pause">Play / Pause</button>
+    <button id="stop">Stop</button>
+  </div>
+
   <div id="jump-controls">
     <label for="jump-measure">Jump to measure:</label>
     <input type="number" id="jump-measure" min="1" max="127" />
@@ -91,10 +129,6 @@
   </div>
   <div id="timeline"><div id="progress-bar"></div></div>
 
-  <div id="player"></div>
-  <button id="play-pause">Play / Pause</button>
-  <button id="stop">Stop</button>
-  
   <div id="password-gate">
     <p>Enter password to access the choir tracks:</p>
     <input type="password" id="password-input" />
@@ -102,6 +136,7 @@
     <p id="access-denied">Access Denied</p>
   </div>
 
+  <div id="player"></div>
 
   <script>
     const correctPassword = "sing123";
@@ -126,11 +161,10 @@
     let sources = [];
     let gains = [];
     let startTime = 0;
+    let offset = 0;
     let isPlaying = false;
     let duration = 0;
-    let offset = 0;
-    let soloStates = [];
-    let muteStates = [];
+    let soloedTracks = new Set();
 
     function checkPassword() {
       const input = document.getElementById("password-input").value;
@@ -139,15 +173,14 @@
       if (input === correctPassword) {
         gate.style.display = "none";
         document.getElementById("player").style.display = "block";
-        document.getElementById("play-pause").style.display = "inline-block";
-        document.getElementById("stop").style.display = "inline-block";
+        document.getElementById("main-controls").style.display = "block";
         document.getElementById("track-title").style.display = "block";
         document.getElementById("timer").style.display = "block";
         document.getElementById("timeline").style.display = "block";
         document.getElementById("jump-controls").style.display = "block";
+        document.getElementById("stop").disabled = true;
+        document.getElementById("play-pause").disabled = true;
         initPlayer();
-        document.getElementById("play-pause").addEventListener("click", playPause);
-        document.getElementById("stop").addEventListener("click", stopAll);
       } else {
         denied.style.display = "block";
       }
@@ -156,8 +189,7 @@
     async function initPlayer() {
       audioContext = new (window.AudioContext || window.webkitAudioContext)();
       const playerDiv = document.getElementById("player");
-      for (let i = 0; i < tracks.length; i++) {
-        const track = tracks[i];
+      for (const [index, track] of tracks.entries()) {
         const div = document.createElement("div");
         div.className = "track";
         const label = document.createElement("label");
@@ -168,15 +200,21 @@
         slider.max = 1;
         slider.step = 0.01;
         slider.value = 1;
-        const muteBtn = document.createElement("button");
-        muteBtn.textContent = "Mute";
+
         const soloBtn = document.createElement("button");
         soloBtn.textContent = "Solo";
+        soloBtn.className = "solo-btn";
+        soloBtn.onclick = () => toggleSolo(index);
+
+        const muteBtn = document.createElement("button");
+        muteBtn.textContent = "Mute";
+        muteBtn.className = "mute-btn";
+        muteBtn.onclick = () => toggleMute(index);
 
         div.appendChild(label);
         div.appendChild(slider);
-        div.appendChild(muteBtn);
         div.appendChild(soloBtn);
+        div.appendChild(muteBtn);
         playerDiv.appendChild(div);
 
         const response = await fetch(track.url);
@@ -185,40 +223,40 @@
 
         const gainNode = audioContext.createGain();
         gainNode.gain.value = slider.value;
-        slider.oninput = () => {
-          gainNode.gain.value = slider.value;
-          muteStates[i] = slider.value == 0;
-        };
-        gains.push({ buffer: audioBuffer, gain: gainNode });
+        slider.oninput = () => updateGains();
+        gains.push({ buffer: audioBuffer, gain: gainNode, slider, muted: false });
         duration = Math.max(duration, audioBuffer.duration);
-        muteStates[i] = false;
-        soloStates[i] = false;
-
-        muteBtn.onclick = () => {
-          muteStates[i] = !muteStates[i];
-          updateGains();
-        };
-        soloBtn.onclick = () => {
-          soloStates[i] = !soloStates[i];
-          updateGains();
-        };
       }
       drawTimeline();
+      document.getElementById("play-pause").disabled = false;
+      document.getElementById("stop").disabled = false;
     }
 
     function updateGains() {
-      const anySolo = soloStates.some(s => s);
-      gains.forEach((g, i) => {
-        let muted = muteStates[i];
-        if (anySolo) muted = !soloStates[i];
-        g.gain.gain.value = muted ? 0 : 1;
+      gains.forEach((track, idx) => {
+        if (soloedTracks.size > 0) {
+          track.gain.gain.value = soloedTracks.has(idx) ? track.slider.value : 0;
+        } else {
+          track.gain.gain.value = track.muted ? 0 : track.slider.value;
+        }
       });
     }
 
-    function playPause() {
-      if (audioContext.state === "suspended") {
-        audioContext.resume();
+    function toggleSolo(index) {
+      if (soloedTracks.has(index)) {
+        soloedTracks.delete(index);
+      } else {
+        soloedTracks.add(index);
       }
+      updateGains();
+    }
+
+    function toggleMute(index) {
+      gains[index].muted = !gains[index].muted;
+      updateGains();
+    }
+
+    function playPause() {
       if (!isPlaying) {
         startTime = audioContext.currentTime - offset;
         sources = gains.map(({ buffer, gain }) => {
@@ -229,11 +267,13 @@
           return source;
         });
         isPlaying = true;
+        document.getElementById("play-pause").textContent = "Pause";
         animateProgress();
       } else {
-        sources.forEach(source => { try { source.stop(); } catch(_){} });
         offset = audioContext.currentTime - startTime;
+        sources.forEach(source => source.stop());
         isPlaying = false;
+        document.getElementById("play-pause").textContent = "Play";
       }
     }
 
@@ -245,9 +285,10 @@
       isPlaying = false;
       offset = 0;
       startTime = audioContext ? audioContext.currentTime : 0;
-      document.getElementById("progress-bar").style.left = "0px";
+      const bar = document.getElementById("progress-bar");
+      if (bar) bar.style.left = "0px";
       document.getElementById("timer").textContent = "Measure 1, Beat 1";
-      document.getElementById("play-pause").textContent = "Play / Pause";
+      document.getElementById("play-pause").textContent = "Play";
     }
 
     function animateProgress() {
@@ -272,7 +313,7 @@
         const tick = document.createElement("div");
         tick.className = "measure-tick";
         tick.innerHTML = `<span>${i + 1}</span>`;
-        tick.onclick = () => jumpToMeasureIndex(i);
+        tick.onclick = () => jumpToSpecificMeasure(i);
         timeline.appendChild(tick);
       }
     }
@@ -280,18 +321,18 @@
     function jumpToMeasure() {
       const measure = parseInt(document.getElementById("jump-measure").value) - 1;
       if (isNaN(measure) || measure < 0) return;
-      jumpToMeasureIndex(measure);
+      jumpToSpecificMeasure(measure);
     }
 
-    function jumpToMeasureIndex(measureIndex) {
-      if (isPlaying) {
-        sources.forEach(source => { try { source.stop(); } catch(_){} });
-      }
-      const time = (measureIndex * tempoMap[0].beatsPerMeasure) / (tempoMap[0].bpm / 60);
+    function jumpToSpecificMeasure(measure) {
+      stopAll();
+      const time = (measure * tempoMap[0].beatsPerMeasure) / (tempoMap[0].bpm / 60);
       offset = time;
       playPause();
     }
 
+    document.getElementById("play-pause").addEventListener("click", playPause);
+    document.getElementById("stop").addEventListener("click", stopAll);
   </script>
 </body>
 </html>
