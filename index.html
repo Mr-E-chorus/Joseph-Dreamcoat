@@ -7,26 +7,18 @@
   <style>
     body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
       max-width: 900px; margin: auto; padding: 20px; line-height: 1.4; }
-    /* Header & utility */
     #track-title { margin: 0 0 8px; text-align:center; }
     #timer { font-weight: 600; text-align:center; }
-    /* Main controls */
     #main-controls { display:none; text-align:center; margin: 12px 0 18px; }
     #play-pause, #stop { padding: 12px 22px; font-size: 1.05rem; border:0; border-radius: 8px; cursor:pointer; margin: 0 6px; }
-    #play-pause { background:#16a34a; color:#fff; }
-    #play-pause[disabled] { opacity:.6; cursor:not-allowed; }
-    #play-pause:hover { filter:brightness(.95); }
-    #stop { background:#ef4444; color:#fff; }
-    #stop[disabled]{ opacity:.6; cursor:not-allowed; }
-    #stop:hover { filter:brightness(.95); }
-    /* Jump & timeline */
+    #play-pause { background:#16a34a; color:#fff; } #play-pause[disabled]{opacity:.6;cursor:not-allowed}
+    #stop { background:#ef4444; color:#fff; } #stop[disabled]{opacity:.6;cursor:not-allowed}
     #jump-controls { display:none; text-align:center; margin-bottom:12px; }
     #timeline { display:none; margin: 10px 0 20px; height: 44px; background: #f3f4f6;
       position: relative; overflow-x:auto; white-space:nowrap; border:1px solid #e5e7eb; border-radius:10px; }
     .measure-tick { display:inline-block; height:100%; width:34px; position:relative; border-left:1px solid #e5e7eb; cursor:pointer; }
     .measure-tick span { position:absolute; bottom:2px; left:4px; font-size:10px; color:#374151; }
     #progress-bar { position:absolute; top:0; height:100%; width:2px; background:#1d4ed8; }
-    /* Player rows */
     #player { display:none; }
     .track { display:flex; align-items:center; gap:12px; padding:8px 10px; border:1px solid #e5e7eb;
       border-radius:10px; background:#fafafa; margin-bottom:12px; }
@@ -40,7 +32,6 @@
     .badge { font-size: 11px; margin-left:6px; padding:2px 6px; border-radius:6px; vertical-align:middle; }
     .ok { background:#e8f5e9; color:#166534; border:1px solid #bbf7d0; }
     .bad { background:#fef2f2; color:#991b1b; border:1px solid #fecaca; }
-    /* Password gate */
     #password-gate { max-width: 520px; margin: 18px auto; border: 1px solid #e5e7eb; border-radius: 10px; padding: 16px; }
     #password-gate p { margin: 6px 0; }
     #access-denied { color:#dc2626; font-weight:700; display:none; }
@@ -75,7 +66,7 @@
       <button class="btn" id="pw-submit">Submit</button>
     </div>
     <p id="pw-hint">Password must be at least 12 characters and include an uppercase letter, lowercase letter, number, and symbol.</p>
-    <p id="pw-error">Password doesn’t meet requirements or is incorrect.</p>
+    <p id="pw-error">Password doesn’t meet requirements or is incorrect. (Tip: remove any leading/trailing spaces if you pasted.)</p>
     <p id="pw-success">Looks good! Unlocking…</p>
     <p id="access-denied">Access Denied</p>
   </div>
@@ -83,11 +74,11 @@
   <div id="player"></div>
 
   <script>
-    // NEW strong password (meets 12+ / upper / lower / number / symbol)
+    // Strong password (meets 12+ / upper / lower / number / symbol)
     const correctPassword = "Sing!Choir2025";
 
     // Complexity: 12+ chars, at least one lowercase, uppercase, digit, and symbol
-    const pwRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^\\w\\s]).{12,}$/;
+    const pwRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\w\s]).{12,}$/;
 
     const tracks = [
       { name: 'Accompaniment', url: 'assets/Accompaniment Close Every Door.wav' },
@@ -97,7 +88,6 @@
       { name: 'Alto',          url: 'assets/Alto Close Every Door.wav' },
       { name: 'Tenor',         url: 'assets/Tenor Close Every Door.wav' },
       { name: 'Bass',          url: 'assets/Bass Close Every Door.wav' }
-      // (Choir 1/2 removed)
     ];
 
     const tempoMap = [ { measure: 0, beatsPerMeasure: 3, bpm: 80 } ];
@@ -126,18 +116,21 @@
     }
 
     function checkPassword() {
-      const input = document.getElementById("password-input").value || "";
-      const err = document.getElementById("pw-error");
-      const ok = document.getElementById("pw-success");
-      err.style.display = "none";
-      ok.style.display = "none";
+      // Trim to avoid paste errors with stray spaces
+      const raw = document.getElementById("password-input").value || "";
+      const input = raw.trim();
 
-      // First enforce complexity
+      const err = document.getElementById("pw-error");
+      const ok  = document.getElementById("pw-success");
+      err.style.display = "none";
+      ok.style.display  = "none";
+
+      // Enforce complexity first
       if (!pwRegex.test(input)) {
         err.style.display = "block";
         return;
       }
-      // Then check match
+      // Then check for exact match
       if (input !== correctPassword) {
         err.style.display = "block";
         return;
@@ -146,6 +139,7 @@
       ok.style.display = "block";
       document.getElementById("password-gate").style.display = "none";
       showAuthUI();
+
       // Hook buttons immediately
       document.getElementById("play-pause").addEventListener("click", playPause);
       document.getElementById("stop").addEventListener("click", stopAll);
@@ -251,7 +245,6 @@
 
       const btn = document.getElementById("play-pause");
       if (!isPlaying) {
-        // start/resume
         if (!Number.isFinite(offset) || offset < 0) offset = 0;
         startTime = audioContext.currentTime - offset;
         sources = channel.map(ch => {
@@ -265,7 +258,6 @@
         btn.textContent = "Pause";
         animateProgress();
       } else {
-        // pause
         const elapsed = audioContext.currentTime - startTime;
         offset = Number.isFinite(elapsed) ? Math.max(0, elapsed) : 0;
         sources.forEach(src => { try { src.stop(); } catch(_){} });
@@ -329,7 +321,6 @@
       if (!Number.isFinite(time) || time < 0) time = 0;
       offset = time;
 
-      // restart from that position
       if (isPlaying && sources && sources.length) {
         sources.forEach(src => { try { src.stop(); } catch(_){} });
         sources = [];
