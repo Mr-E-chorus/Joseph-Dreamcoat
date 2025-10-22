@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Choir Practice Player</title>
+  <title>Joseph and the Amazing Technicolor Dreamcoat Practice Tracks</title>
   <link rel="icon" href="favicon.ico" type="image/x-icon">
   <style>
     body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
@@ -44,7 +44,7 @@
   </style>
 </head>
 <body>
-  <h1 id="track-title">Choir Practice Player</h1>
+  <h1 id="track-title">Musical Practice Player</h1>
   <div id="timer">Measure --, Beat --</div>
 
   <!-- Song menu (shown after password) -->
@@ -82,7 +82,7 @@
 
   <script>
     // ---------------- AUTH ----------------
-    const correctPassword = "Sing!Choir2025";
+    const correctPassword = "G0G0Broseph!";
     const pwRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\w\s]).{12,}$/;
 
     document.getElementById("pw-submit").addEventListener("click", checkPassword);
@@ -120,23 +120,27 @@
     // Add more songs by copying this object and changing fields.
     const SONGS = [
       {
-        id: "tribute",
-        title: "A Tribute to the Armed Forces",
-        basePath: "assets/A Tribute to the Armed Forces/",
+        id: "megamix",
+        title: "22. Megamix",
+        basePath: "assets/22 Megamix/",
         tracks: [
-          { label: "Accompaniment", file: "A Tribute to the Armed Services accompaniment Track.wav" },
-          { label: "Soprano",       file: "SopranoA Tribute to the Armed Forces.wav" },
-          { label: "Alto",          file: "AltoA Tribute to the Armed Forces.wav" },
-          { label: "Tenor",         file: "TenorA Tribute to the Armed Forces.wav" },
-          { label: "Bass",          file: "BassA Tribute to the Armed Forces.wav" }
+          { label: "Accompaniment",   file: "Accompaniment 22 Megamix.wav" },
+          { label: "Soprano 1",       file: "Soprano 1 22 Megamix.wav" },
+          { label: "Soprano 2",       file: "Soprano 2 22 Megamix.wav" },
+          { label: "Alto 1",          file: "Alto 1 22 Megamix.wav" },
+          { label: "Alto 2",          file: "Alto 2 22 Megamix.wav" },
+          { label: "Tenor",           file: "Tenor 22 Megamix.wav" },
+          { label: "Baritone",        file: "Baritone 22 Megamix.wav" },
+          { label: "Bass",            file: "Bass 2 22 Megamix.wav" },
+          { label: "Soloists",        file: "Soloists 22 Megamix.wav" },
+          { label: "Soloists",        file: "Solo Female 22 Megamix.wav" },
         ],
         // Timeline/tempo for this song:
         beatsPerMeasure: 4,              // set to 3 for 3/4, etc.
-        measuresTotal:   127,
-        pickupBeats:     1,              // quarter-note pickup
+        measuresTotal:   300,
         tempoMap: [
-          { measure: 1, bpm: 96 },       // pickup + measures 1–7
-          { measure: 8, bpm: 108 }       // from measure 8 onward
+          { measure: 1, bpm: 88 },       // pickup + measures 1–7
+          { measure: 9, bpm: 144 },       // pickup + measures 1–7
         ]
       },
       {
