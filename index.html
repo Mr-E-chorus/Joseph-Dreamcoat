@@ -9,6 +9,7 @@
       max-width: 900px; margin: auto; padding: 20px; line-height: 1.4; }
     #track-title { margin: 0 0 8px; text-align:center; }
     #timer { font-weight: 600; text-align:center; }
+    #song-picker { display:none; text-align:center; margin: 10px 0; }
     #main-controls { display:none; text-align:center; margin: 12px 0 18px; }
     #play-pause, #stop { padding: 12px 22px; font-size: 1.05rem; border:0; border-radius: 8px; cursor:pointer; margin: 0 6px; }
     #play-pause { background:#16a34a; color:#fff; } #play-pause[disabled]{opacity:.6;cursor:not-allowed}
@@ -43,8 +44,14 @@
   </style>
 </head>
 <body>
-  <h1 id="track-title">Close Every Door</h1>
+  <h1 id="track-title">Choir Practice Player</h1>
   <div id="timer">Measure --, Beat --</div>
+
+  <!-- Song menu (shown after password) -->
+  <div id="song-picker">
+    <label for="song-select"><strong>Choose a song:</strong></label>
+    <select id="song-select"></select>
+  </div>
 
   <div id="main-controls">
     <button id="play-pause" disabled>Loading…</button>
@@ -74,90 +81,399 @@
   <div id="player"></div>
 
   <script>
-    // Strong password (meets 12+ / upper / lower / number / symbol)
+    // ---------------- AUTH ----------------
     const correctPassword = "Sing!Choir2025";
-
-    // Complexity: 12+ chars, at least one lowercase, uppercase, digit, and symbol
     const pwRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\w\s]).{12,}$/;
 
-    const tracks = [
-      { name: 'Accompaniment', url: 'assets/Accompaniment Close Every Door.wav' },
-      { name: 'Joseph',        url: 'assets/Joseph Close Every Door.wav' },
-      { name: 'S1',            url: 'assets/S1 Close Every Door.wav' },
-      { name: 'S2',            url: 'assets/S2 Close Every Door.wav' },
-      { name: 'Alto',          url: 'assets/Alto Close Every Door.wav' },
-      { name: 'Tenor',         url: 'assets/Tenor Close Every Door.wav' },
-      { name: 'Bass',          url: 'assets/Bass Close Every Door.wav' }
-    ];
-
-    const tempoMap = [ { measure: 0, beatsPerMeasure: 3, bpm: 80 } ];
-
-    let audioContext;
-    let sources = [];
-    let channel = []; // {buffer, gain, slider, muteBtn, soloBtn, muted, solo}
-    let startTime = 0;
-    let duration = 0;
-    let offset = 0;
-    let isPlaying = false;
-
-    // Password gate
     document.getElementById("pw-submit").addEventListener("click", checkPassword);
     document.getElementById("password-input").addEventListener("keydown", (e) => {
       if (e.key === "Enter") checkPassword();
     });
 
-    function showAuthUI() {
+    function checkPassword() {
+      const input = (document.getElementById("password-input").value || "").trim();
+      const err = document.getElementById("pw-error");
+      const ok  = document.getElementById("pw-success");
+      err.style.display = "none"; ok.style.display = "none";
+      if (!pwRegex.test(input)) { err.style.display = "block"; return; }
+      if (input !== correctPassword) { err.style.display = "block"; return; }
+
+      ok.style.display = "block";
+      document.getElementById("password-gate").style.display = "none";
+      showAppUI();
+      bootstrapSongs(); // build menu and load the first song
+    }
+
+    function showAppUI() {
+      document.getElementById("song-picker").style.display = "block";
       document.getElementById("main-controls").style.display = "block";
       document.getElementById("track-title").style.display = "block";
       document.getElementById("timer").style.display = "block";
       document.getElementById("timeline").style.display = "block";
       document.getElementById("jump-controls").style.display = "block";
       document.getElementById("player").style.display = "block";
-    }
-
-    function checkPassword() {
-      // Trim to avoid paste errors with stray spaces
-      const raw = document.getElementById("password-input").value || "";
-      const input = raw.trim();
-
-      const err = document.getElementById("pw-error");
-      const ok  = document.getElementById("pw-success");
-      err.style.display = "none";
-      ok.style.display  = "none";
-
-      // Enforce complexity first
-      if (!pwRegex.test(input)) {
-        err.style.display = "block";
-        return;
-      }
-      // Then check for exact match
-      if (input !== correctPassword) {
-        err.style.display = "block";
-        return;
-      }
-
-      ok.style.display = "block";
-      document.getElementById("password-gate").style.display = "none";
-      showAuthUI();
-
-      // Hook buttons immediately
       document.getElementById("play-pause").addEventListener("click", playPause);
       document.getElementById("stop").addEventListener("click", stopAll);
-      initPlayer();
     }
 
-    async function initPlayer() {
-      audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    // --------------- SONG LIBRARY ---------------
+    // Add more songs by copying this object and changing fields.
+    const SONGS = [
+      {
+        id: "tribute",
+        title: "A Tribute to the Armed Forces",
+        basePath: "assets/A Tribute to the Armed Forces/",
+        tracks: [
+          { label: "Accompaniment", file: "A Tribute to the Armed Services accompaniment Track.wav" },
+          { label: "Soprano",       file: "SopranoA Tribute to the Armed Forces.wav" },
+          { label: "Alto",          file: "AltoA Tribute to the Armed Forces.wav" },
+          { label: "Tenor",         file: "TenorA Tribute to the Armed Forces.wav" },
+          { label: "Bass",          file: "BassA Tribute to the Armed Forces.wav" }
+        ],
+        // Timeline/tempo for this song:
+        beatsPerMeasure: 4,              // set to 3 for 3/4, etc.
+        measuresTotal:   127,
+        pickupBeats:     1,              // quarter-note pickup
+        tempoMap: [
+          { measure: 1, bpm: 96 },       // pickup + measures 1–7
+          { measure: 8, bpm: 108 }       // from measure 8 onward
+        ]
+      },
+      {
+        id: "tango",
+        title: "Holiday Tango",
+        basePath: "assets/Holiday Tango/",
+        tracks: [
+          { label: "Accompaniment", file: "Accompaniment Holiday Tango_1.wav" },
+          { label: "Soprano",       file: "Soprano Holiday Tango_1.wav" },
+          { label: "Alto",          file: "Alto Holiday Tango_1.wav" },
+          { label: "Tenor",         file: "Tenor Holiday Tango_1.wav" },
+          { label: "Bass",          file: "Bass Holiday Tango_1.wav" }
+        ],
+        // Timeline/tempo for this song:
+        beatsPerMeasure: 4,              // set to 3 for 3/4, etc.
+        measuresTotal:   72,
+        tempoMap: [
+          { measure: 1, bpm: 60 },       // pickup + measures 1–7
+          { measure: 21, bpm: 152 }       // from measure 21 onward
+        ]
+      },
+      {
+        id: "Personent",
+        title: "Personent Hodie",
+        basePath: "assets/Personent Hodie/",
+        tracks: [
+          { label: "Accompaniment", file: "Accompaniment Personet Hodie.wav" },
+          { label: "Accompaniment 2", file: "Accompaniment 2 Personet Hodie.wav" },
+          { label: "Soprano 1",       file: "Soprano 1 Personet Hodie.wav" },
+          { label: "Soprano 2",       file: "Soprano2 Personet Hodie.wav" },
+          { label: "Alto",          file: "Alto Personet Hodie.wav" },
+          { label: "Tenor",         file: "Tenor Personet Hodie.wav" },
+          { label: "Bass",          file: "Bass Personet Hodie.wav" },
+          { label: "Click Track",          file: "Click Track Personet Hodie.wav" },
+        ],
+        // Timeline/tempo for this song:
+        beatsPerMeasure: 4,              // set to 3 for 3/4, etc.
+        measuresTotal:   72,
+        tempoMap: [
+          { measure: 1, bpm: 60 },       // pickup + measures 1–7
+          { measure: 21, bpm: 152 }       // from measure 21 onward
+        ]
+      },
+      {
+        id: "wonderful",
+        title: "It's the Most Wonderful Time of the year",
+        basePath: "assets/It's the Most Wonderful Time of the year/",
+        tracks: [
+          { label: "Accompaniment", file: "Accompaniment It's the Most Wonderful Time of the year_1.wav" },
+          { label: "Soprano",       file: "Soprano It's the Most Wonderful Time of the year_1.wav" },
+          { label: "Alto",          file: "Alto It's the Most Wonderful Time of the year_1.wav" },
+          { label: "Tenor",         file: "Tenor It's the Most Wonderful Time of the year_1.wav" },
+          { label: "Bass",          file: "Bass It's the Most Wonderful Time of the year_1.wav" },
+        ],
+        // Timeline/tempo for this song:
+        beatsPerMeasure: 4,              // set to 3 for 3/4, etc.
+        measuresTotal:   95,
+        tempoMap: [
+          { measure: 1, bpm: 184 },       // 
+        ]
+      },
+      {
+        id: "light",
+        title: "Light",
+        basePath: "assets/Light/",
+        tracks: [
+          { label: "Accompaniment", file: "Accompaniment Light.wav" },
+          { label: "Soprano",       file: "Soprano Light.wav" },
+          { label: "Alto",          file: "Alto Light.wav" },
+          { label: "Tenor",         file: "Tenor Light.wav" },
+          { label: "Bass",          file: "Bass Light.wav" },
+        ],
+        // Timeline/tempo for this song:
+        beatsPerMeasure: 4,              // set to 3 for 3/4, etc.
+        measuresTotal:   95,
+        tempoMap: [
+          { measure: 1, bpm: 184 },       // 
+        ]
+      },
+            {
+        id: "elf",
+        title: "Theme from Elf",
+        basePath: "assets/Theme from Elf/",
+        tracks: [
+          { label: "Accompaniment", file: "Steinway Grand Piano Theme from Elf.wav" },
+          { label: "Soprano",       file: "Soprano Theme from Elf.wav" },
+          { label: "Alto",          file: "Alto Theme from Elf.wav" },
+          { label: "Tenor",         file: "Tenor Theme from Elf.wav" },
+          { label: "Bass",          file: "Bass Theme from Elf.wav" },
+        ],
+        // Timeline/tempo for this song:
+        beatsPerMeasure: 4,              // set to 3 for 3/4, etc.
+        measuresTotal:   95,
+        tempoMap: [
+          { measure: 1, bpm: 184 },       // 
+        ]
+      },
+      {
+        id: "ghostbusters",
+        title: "Ghostbusters",
+        basePath: "assets/Ghostbusters/",
+        tracks: [
+          { label: "Accompaniment", file: "Ghostbusters accompaniment.mp3" },
+        ],
+        // Timeline/tempo for this song:
+        beatsPerMeasure: 4,              // set to 3 for 3/4, etc.
+        measuresTotal:   96,
+        tempoMap: [
+          { measure: 1, bpm: 110 },       // 
+        ]
+      },
+      {
+        id: "spell",
+        title: "I Put a Spell On You",
+        basePath: "assets/I Put a Spell On You/",
+        tracks: [
+          { label: "Accompaniment", file: "I Put a Spell on You Accompaniment.mp3" },
+          { label: "Soprano",       file: "Sop I Put a Spell On You-mp3.mp3" },
+          { label: "Alto",          file: "Alto I Put a Spell On You-mp3.mp3" },
+          { label: "Tenor",         file: "Tenor I Put a Spell On You-mp3.mp3" },
+          { label: "Bass",          file: "Bass I Put a Spell On You-mp3.mp3" }
+        ],
+        // Timeline/tempo for this song:
+        beatsPerMeasure: 4,              // set to 3 for 3/4, etc.
+        measuresTotal:   72,
+        tempoMap: [
+          { measure: 1, bpm: 60 },       // pickup + measures 1–7
+          { measure: 21, bpm: 152 }       // from measure 21 onward
+        ]
+      },
+      {
+        id: "monster",
+        title: "Monster Mash",
+        basePath: "assets/Monster Mash/",
+        tracks: [
+          { label: "Accompaniment", file: "Monster Mash Accompaniment.mp3" },
+          { label: "Soprano",       file: "Soprano Monster Mash-mp3.mp3" },
+          { label: "Alto",          file: "Alto Monster Mash-mp3.mp3" },
+          { label: "Baritone",      file: "Baritone Monster Mash-mp3.mp3" },
+        ],
+        // Timeline/tempo for this song:
+        beatsPerMeasure: 4,              // set to 3 for 3/4, etc.
+        measuresTotal:   72,
+        tempoMap: [
+          { measure: 1, bpm: 144 },       // 
+        ]
+      },
+      {
+        id: "sleigh",
+        title: "Sleigh Ride",
+        basePath: "assets/Sleigh Ride/",
+        tracks: [
+          { label: "Accompaniment", file: "11503293F Sleigh Ride.wav" },
+          { label: "Soprano",       file: "Sop Sleigh Ride.wav" },
+          { label: "Alto",          file: "Alto Sleigh Ride.wav" },
+          { label: "Tenor",         file: "Tenor Sleigh Ride.wav" },
+          { label: "Bass",          file: "Bass Sleigh Ride.wav" },
+          { label: "Solo",          file: "Solo Sleigh Ride.wav" },
+        ],
+        // Timeline/tempo for this song:
+        beatsPerMeasure: 4,              // set to 3 for 3/4, etc.
+        measuresTotal:   95,
+        tempoMap: [
+          { measure: 1, bpm: 184 },       // 
+        ]
+      },
+      {
+        id: "wonderland",
+        title: "Winter Wonderland",
+        basePath: "assets/Winter Wonderland/",
+        tracks: [
+          { label: "Accompaniment", file: "Accompaniment Winter Wonderland.wav" },
+          { label: "Soprano",       file: "Soprano Winter Wonderland.wav" },
+          { label: "Alto",          file: "Alto Winter Wonderland.wav" },
+          { label: "Tenor",         file: "Tenor Winter Wonderland.wav" },
+          { label: "Bass",          file: "Bass Winter Wonderland.wav" },
+        ],
+        // Timeline/tempo for this song:
+        beatsPerMeasure: 4,              // set to 3 for 3/4, etc.
+        measuresTotal:   71,
+        tempoMap: [
+          { measure: 1, bpm: 112 },       // 
+        ]
+      },
+      {
+        id: "frosty",
+        title: "Frosty the Snowman",
+        basePath: "assets/Frosty the Snowman/",
+        tracks: [
+          { label: "Accompaniment", file: "Accompaniment Frosty the Snowman.wav" },
+          { label: "Soprano",       file: "Soprano Frosty the Snowman.wav" },
+          { label: "Alto",          file: "Alto Frosty the Snowman.wav" },
+          { label: "Tenor",         file: "Tenor Frosty the Snowman.wav" },
+          { label: "Bass",          file: "Bass Frosty the Snowman.wav" },
+          { label: "Trio Top",      file: "Trio Top Frosty the Snowman.wav" },
+          { label: "Trio Mid",      file: "Trio Middle Frosty the Snowman.wav" },
+          { label: "Trio Bot",      file: "Trio Bottom Frosty the Snowman.wav" },
+        ],
+        // Timeline/tempo for this song:
+        beatsPerMeasure: 4,              // set to 3 for 3/4, etc.
+        measuresTotal:   151,
+        tempoMap: [
+          { measure: 1, bpm: 264 },       // 
+        ]
+      },
+      // Example stub for adding another song later:
+      // {
+      //   id: "close-every-door",
+      //   title: "Close Every Door",
+      //   basePath: "assets/Close Every Door/",
+      //   tracks: [
+      //     { label: "Accompaniment", file: "Accompaniment Close Every Door.wav" },
+      //     { label: "Joseph",        file: "Joseph Close Every Door.wav" },
+      //     { label: "S1",            file: "S1 Close Every Door.wav" },
+      //     { label: "S2",            file: "S2 Close Every Door.wav" },
+      //     { label: "Alto",          file: "Alto Close Every Door.wav" },
+      //     { label: "Tenor",         file: "Tenor Close Every Door.wav" },
+      //     { label: "Bass",          file: "Bass Close Every Door.wav" }
+      //   ],
+      //   beatsPerMeasure: 3,
+      //   measuresTotal:   100,          // <- set the actual count
+      //   pickupBeats:     0,            // <- set if there is a pickup
+      //   tempoMap: [
+      //     { measure: 1, bpm: 80 }
+      //   ]
+      // }
+    ];
+
+    // --------------- GLOBAL STATE ---------------
+    let audioContext;
+    let sources = [];
+    let channel = []; // per-track state
+    let isPlaying = false;
+    let offset = 0;
+    let startTime = 0;
+
+    // per-song timing
+    let currentSong = null;
+    let measureStartTimes = []; // 1-based index
+    let totalScoreTime = 0;
+    let pickupDuration = 0;
+
+    // --------------- SONG BOOTSTRAP ---------------
+    function bootstrapSongs() {
+      // populate menu
+      const sel = document.getElementById("song-select");
+      sel.innerHTML = "";
+      SONGS.forEach(s => {
+        const opt = document.createElement("option");
+        opt.value = s.id;
+        opt.textContent = s.title;
+        sel.appendChild(opt);
+      });
+      sel.addEventListener("change", () => {
+        const next = SONGS.find(s => s.id === sel.value);
+        if (next) setSong(next);
+      });
+
+      // load first song by default
+      setSong(SONGS[0]);
+    }
+
+    function setSong(songCfg) {
+      // stop current audio if playing
+      stopAll(true);
+      currentSong = songCfg;
+
+      // UI: title
+      document.getElementById("track-title").textContent = songCfg.title;
+
+      // Rebuild timing + timeline
+      buildTimingFromConfig(songCfg);
+      drawTimeline(songCfg);
+
+      // Clear player rows and load tracks for this song
+      document.getElementById("player").innerHTML = "";
+      channel = [];
+      initPlayerForSong(songCfg);
+    }
+
+    // --------------- TIMING / TEMPO ---------------
+    function bpmAtMeasure(m, tempoMap) {
+      let bpm = tempoMap[0].bpm;
+      for (let i = 0; i < tempoMap.length; i++) {
+        if (tempoMap[i].measure <= m) bpm = tempoMap[i].bpm;
+        else break;
+      }
+      return bpm;
+    }
+
+    function buildTimingFromConfig(cfg) {
+      const firstBpm = bpmAtMeasure(1, cfg.tempoMap);
+      pickupDuration = (cfg.pickupBeats || 0) * (60 / firstBpm);
+
+      measureStartTimes = new Array(cfg.measuresTotal + 2);
+      let t = pickupDuration; // measure 1 begins after pickup
+      for (let m = 1; m <= cfg.measuresTotal; m++) {
+        measureStartTimes[m] = t;
+        const dur = cfg.beatsPerMeasure * (60 / bpmAtMeasure(m, cfg.tempoMap));
+        t += dur;
+      }
+      measureStartTimes[cfg.measuresTotal + 1] = t; // sentinel
+      totalScoreTime = t;
+
+      // update jump max
+      const jm = document.getElementById("jump-measure");
+      if (jm) jm.max = String(cfg.measuresTotal);
+    }
+
+    function timeToPosition(t, cfg) {
+      if (t < pickupDuration) {
+        return { inPickup: true, measure: 1, beat: 1, fracWithinMeasure: 0 };
+      }
+      let m = 1;
+      while (m <= cfg.measuresTotal && !(measureStartTimes[m] <= t && t < measureStartTimes[m + 1])) m++;
+      if (m > cfg.measuresTotal) m = cfg.measuresTotal;
+
+      const start = measureStartTimes[m];
+      const end = measureStartTimes[m + 1] ?? totalScoreTime;
+      const frac = Math.min(0.999, Math.max(0, (t - start) / (end - start)));
+      const beat = Math.min(cfg.beatsPerMeasure, Math.floor(frac * cfg.beatsPerMeasure) + 1);
+
+      return { inPickup: false, measure: m, beat, fracWithinMeasure: frac };
+    }
+
+    // --------------- AUDIO LOADING / UI ---------------
+    async function initPlayerForSong(cfg) {
+      if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
       const playerDiv = document.getElementById("player");
 
       let loadedCount = 0;
-
-      for (const track of tracks) {
+      for (const t of cfg.tracks) {
         // Row UI
         const row = document.createElement("div");
         row.className = "track";
         const label = document.createElement("label");
-        label.textContent = track.name;
+        label.textContent = t.label;
 
         const sliderWrap = document.createElement("div");
         sliderWrap.className = "slider-wrap";
@@ -173,9 +489,10 @@
         row.append(label, sliderWrap, muteBtn, soloBtn);
         playerDiv.appendChild(row);
 
-        // Load defensively
+        // Load audio
         try {
-          const resp = await fetch(track.url);
+          const url = encodeURI(cfg.basePath + t.file);
+          const resp = await fetch(url);
           if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
           const arr = await resp.arrayBuffer();
           const buffer = await audioContext.decodeAudioData(arr);
@@ -185,22 +502,21 @@
 
           const ch = { buffer, gain, slider, muteBtn, soloBtn, muted:false, solo:false };
           channel.push(ch);
-          duration = Math.max(duration, buffer.duration);
 
           // UI wiring
-          slider.addEventListener('input', () => updateMix());
+          slider.addEventListener('input', updateMix);
           muteBtn.addEventListener('click', () => { ch.muted = !ch.muted; muteBtn.classList.toggle('active', ch.muted); updateMix(); });
           soloBtn.addEventListener('click', () => { ch.solo = !ch.solo; soloBtn.classList.toggle('active', ch.solo); updateMix(); });
 
           // Status badge
-          const ok = document.createElement('span');
-          ok.className = 'badge ok';
-          ok.textContent = 'Loaded';
-          label.appendChild(ok);
+          const good = document.createElement('span');
+          good.className = 'badge ok';
+          good.textContent = 'Loaded';
+          label.appendChild(good);
 
           loadedCount++;
         } catch (e) {
-          console.error(`Failed to load "${track.name}" (${track.url}):`, e);
+          console.error(`Failed to load "${t.label}"`, e);
           const bad = document.createElement('span');
           bad.className = 'badge bad';
           bad.textContent = 'Failed';
@@ -208,10 +524,7 @@
         }
       }
 
-      drawTimeline();
       updateMix();
-
-      // Enable buttons if something loaded
       const playBtn = document.getElementById("play-pause");
       const stopBtn  = document.getElementById("stop");
       if (loadedCount > 0) {
@@ -267,16 +580,18 @@
       }
     }
 
-    function stopAll() {
+    function stopAll(silent=false) {
       if (sources && sources.length) sources.forEach(src => { try { src.stop(); } catch(_){} });
       sources = [];
       isPlaying = false;
       offset = 0;
       startTime = audioContext ? audioContext.currentTime : 0;
-      document.getElementById("play-pause").textContent = "Play";
-      const bar = document.getElementById("progress-bar");
-      if (bar) bar.style.left = "0px";
-      document.getElementById("timer").textContent = "Measure 1, Beat 1";
+      if (!silent) {
+        document.getElementById("play-pause").textContent = "Play";
+        const bar = document.getElementById("progress-bar");
+        if (bar) bar.style.left = "0px";
+        document.getElementById("timer").textContent = "Measure 1, Beat 1";
+      }
     }
 
     function animateProgress() {
@@ -284,43 +599,43 @@
       const update = () => {
         if (!isPlaying) return;
         const elapsed = audioContext.currentTime - startTime;
-        const bps = tempoMap[0].bpm / 60;
-        const totalBeats = elapsed * bps;
-        const measure = Math.floor(totalBeats / tempoMap[0].beatsPerMeasure);
-        const beat = Math.floor(totalBeats % tempoMap[0].beatsPerMeasure) + 1;
-        document.getElementById("timer").textContent = `Measure ${measure + 1}, Beat ${beat}`;
-        bar.style.left = `${measure * 34}px`;
+        const pos = timeToPosition(elapsed, currentSong);
+
+        if (pos.inPickup) {
+          document.getElementById("timer").textContent = "Pickup";
+          bar.style.left = "0px";
+        } else {
+          document.getElementById("timer").textContent = `Measure ${pos.measure}, Beat ${pos.beat}`;
+          const px = ((pos.measure - 1) + pos.fracWithinMeasure) * 34;
+          bar.style.left = `${px}px`;
+        }
         requestAnimationFrame(update);
       };
       update();
     }
 
-    function drawTimeline() {
+    // --------------- TIMELINE / JUMP ---------------
+    function drawTimeline(cfg) {
       const timeline = document.getElementById("timeline");
-      const totalMeasures = Math.ceil((duration * (tempoMap[0].bpm / 60)) / tempoMap[0].beatsPerMeasure);
-      for (let i = 0; i < totalMeasures; i++) {
+      [...timeline.querySelectorAll('.measure-tick')].forEach(el => el.remove());
+      for (let i = 1; i <= cfg.measuresTotal; i++) {
         const tick = document.createElement("div");
         tick.className = "measure-tick";
-        tick.innerHTML = `<span>${i + 1}</span>`;
-        tick.onclick = () => jumpToMeasureIndex(i);
+        tick.innerHTML = `<span>${i}</span>`;
+        tick.onclick = () => jumpToMeasureNumber(i);
         timeline.appendChild(tick);
       }
     }
 
     function jumpToMeasure() {
       const m = parseInt(document.getElementById("jump-measure").value, 10);
-      if (!Number.isFinite(m) || m < 1) return;
-      jumpToMeasureIndex(m - 1);
+      if (!Number.isFinite(m) || m < 1 || m > currentSong.measuresTotal) return;
+      jumpToMeasureNumber(m);
     }
 
-    function jumpToMeasureIndex(measureIndex) {
-      if (!Number.isFinite(measureIndex) || measureIndex < 0) return;
-      const secondsPerBeat = 60 / tempoMap[0].bpm;
-      const beatsPerMeasure = tempoMap[0].beatsPerMeasure;
-      let time = measureIndex * beatsPerMeasure * secondsPerBeat;
-      if (!Number.isFinite(time) || time < 0) time = 0;
+    function jumpToMeasureNumber(measureNumber) {
+      const time = measureStartTimes[measureNumber] ?? pickupDuration;
       offset = time;
-
       if (isPlaying && sources && sources.length) {
         sources.forEach(src => { try { src.stop(); } catch(_){} });
         sources = [];
