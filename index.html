@@ -120,6 +120,276 @@
     // Add more songs by copying this object and changing fields.
     const SONGS = [
       {
+        id: "overture",
+        title: "0. Overture",
+        basePath: "assets/",
+        tracks: [
+          { label: "Accompaniment",   file: "0 Overture Accompaniment.wav" },
+        ],
+        // Timeline/tempo for this song:
+        beatsPerMeasure: 4,              // set to 3 for 3/4, etc.
+        measuresTotal:   300,
+        tempoMap: [
+          { measure: 1, bpm: 88 },       // pickup + measures 1–7
+          { measure: 9, bpm: 144 },       // pickup + measures 1–7
+        ]
+      },
+      {
+        id: "opener",
+        title: "1-2. Prologue/Any Dream Will Do/Jacob and Sons",
+        basePath: "assets/",
+        tracks: [
+          { label: "Accompaniment",   file: "1-2 Prologue, Any Dream Will Do, Jacob and Sons Accompaniment.wav" },
+        ],
+        // Timeline/tempo for this song:
+        beatsPerMeasure: 4,              // set to 3 for 3/4, etc.
+        measuresTotal:   300,
+        tempoMap: [
+          { measure: 1, bpm: 88 },       // pickup + measures 1–7
+          { measure: 9, bpm: 144 },       // pickup + measures 1–7
+        ]
+      },
+      {
+        id: "colorsong",
+        title: "2a. Joseph's Coat",
+        basePath: "assets/",
+        tracks: [
+          { label: "Accompaniment",   file: "2a Joseph's Coat Accompaniment.wav" },
+        ],
+        // Timeline/tempo for this song:
+        beatsPerMeasure: 4,              // set to 3 for 3/4, etc.
+        measuresTotal:   300,
+        tempoMap: [
+          { measure: 1, bpm: 88 },       // pickup + measures 1–7
+          { measure: 9, bpm: 144 },       // pickup + measures 1–7
+        ]
+      },
+      {
+        id: "dream",
+        title: "3. Joseph's Dreams",
+        basePath: "assets/",
+        tracks: [
+          { label: "Accompaniment",   file: "3 Joseph's Dreams Accompaniment.wav" },
+        ],
+        // Timeline/tempo for this song:
+        beatsPerMeasure: 4,              // set to 3 for 3/4, etc.
+        measuresTotal:   300,
+        tempoMap: [
+          { measure: 1, bpm: 88 },       // pickup + measures 1–7
+          { measure: 9, bpm: 144 },       // pickup + measures 1–7
+        ]
+      },
+      {
+        id: "ppj",
+        title: "4. Poor, Poor Joseph",
+        basePath: "assets/",
+        tracks: [
+          { label: "Accompaniment",   file: "4 Poor, Poor Joseph Accompaniment.wav" },
+        ],
+        // Timeline/tempo for this song:
+        beatsPerMeasure: 4,              // set to 3 for 3/4, etc.
+        measuresTotal:   300,
+        tempoMap: [
+          { measure: 1, bpm: 88 },       // pickup + measures 1–7
+          { measure: 9, bpm: 144 },       // pickup + measures 1–7
+        ]
+      },
+      {
+        id: "hoe",
+        title: "5. One More Angel in Heaven/Hoedown",
+        basePath: "assets/",
+        tracks: [
+          { label: "Accompaniment",   file: "5 One More Angel in Heaven Hoedown Accompaniment.wav" },
+        ],
+        // Timeline/tempo for this song:
+        beatsPerMeasure: 4,              // set to 3 for 3/4, etc.
+        measuresTotal:   300,
+        tempoMap: [
+          { measure: 1, bpm: 88 },       // pickup + measures 1–7
+          { measure: 9, bpm: 144 },       // pickup + measures 1–7
+        ]
+      },
+      {
+        id: "journey",
+        title: "6. Journey to Egypt",
+        basePath: "assets/",
+        tracks: [
+          { label: "Accompaniment",   file: "6 Journey to Egypt Accompaniment.wav" },
+        ],
+        // Timeline/tempo for this song:
+        beatsPerMeasure: 4,              // set to 3 for 3/4, etc.
+        measuresTotal:   300,
+        tempoMap: [
+          { measure: 1, bpm: 88 },       // pickup + measures 1–7
+          { measure: 9, bpm: 144 },       // pickup + measures 1–7
+        ]
+      },
+      {
+        id: "potiphar",
+        title: "6A. Potiphar",
+        basePath: "assets/",
+        tracks: [
+          { label: "Accompaniment",   file: "6A Potiphar Accompaniment.wav" },
+        ],
+        // Timeline/tempo for this song:
+        beatsPerMeasure: 4,              // set to 3 for 3/4, etc.
+        measuresTotal:   300,
+        tempoMap: [
+          { measure: 1, bpm: 88 },       // pickup + measures 1–7
+          { measure: 9, bpm: 144 },       // pickup + measures 1–7
+        ]
+      },
+      {
+        id: "door1",
+        title: "7. Close Every Door",
+        basePath: "assets/",
+        tracks: [
+          { label: "Accompaniment",   file: "7 Close Every Door Accompaniment.wav" },
+        ],
+        // Timeline/tempo for this song:
+        beatsPerMeasure: 4,              // set to 3 for 3/4, etc.
+        measuresTotal:   300,
+        tempoMap: [
+          { measure: 1, bpm: 88 },       // pickup + measures 1–7
+          { measure: 9, bpm: 144 },       // pickup + measures 1–7
+        ]
+      },
+      {
+        id: "gggj",
+        title: "8. Go, Go, Go Joseph",
+        basePath: "assets/",
+        tracks: [
+          { label: "Accompaniment",   file: "8 Go, Go, Go Joseph Accompaniment.wav" },
+        ],
+        // Timeline/tempo for this song:
+        beatsPerMeasure: 4,              // set to 3 for 3/4, etc.
+        measuresTotal:   300,
+        tempoMap: [
+          { measure: 1, bpm: 88 },       // pickup + measures 1–7
+          { measure: 9, bpm: 144 },       // pickup + measures 1–7
+        ]
+      },
+      {
+        id: "playoff1",
+        title: "8b. Go, Go, Go Joseph Playoff",
+        basePath: "assets/",
+        tracks: [
+          { label: "Accompaniment",   file: "8b Go, Go, Go Joseph (Playout Act 1) Accompaniment.wav" },
+        ],
+        // Timeline/tempo for this song:
+        beatsPerMeasure: 4,              // set to 3 for 3/4, etc.
+        measuresTotal:   300,
+        tempoMap: [
+          { measure: 1, bpm: 88 },       // pickup + measures 1–7
+          { measure: 9, bpm: 144 },       // pickup + measures 1–7
+        ]
+      },
+      {
+        id: "entracte",
+        title: "9. Entr'acte",
+        basePath: "assets/",
+        tracks: [
+          { label: "Accompaniment",   file: "09 Entracte Accompaniment.wav" },
+        ],
+        // Timeline/tempo for this song:
+        beatsPerMeasure: 4,              // set to 3 for 3/4, etc.
+        measuresTotal:   300,
+        tempoMap: [
+          { measure: 1, bpm: 88 },       // pickup + measures 1–7
+          { measure: 9, bpm: 144 },       // pickup + measures 1–7
+        ]
+      },
+      {
+        id: "story",
+        title: "10. A Pharaoh's Story",
+        basePath: "assets/",
+        tracks: [
+          { label: "Accompaniment",   file: "10-11 A Pharaoh's Story, Poor, Poor Pharaoh, Song of the King Accompaniment.wav" },
+        ],
+        // Timeline/tempo for this song:
+        beatsPerMeasure: 4,              // set to 3 for 3/4, etc.
+        measuresTotal:   300,
+        tempoMap: [
+          { measure: 1, bpm: 88 },       // pickup + measures 1–7
+          { measure: 9, bpm: 144 },       // pickup + measures 1–7
+        ]
+      },
+      {
+        id: "ppp",
+        title: "11 Poor, Poor Pharaoh/Song of the King",
+        basePath: "assets/",
+        tracks: [
+          { label: "Accompaniment",   file: "11 Poor, Poor Pharaoh Song of the King Accompaniment.wav" },
+        ],
+        // Timeline/tempo for this song:
+        beatsPerMeasure: 4,              // set to 3 for 3/4, etc.
+        measuresTotal:   300,
+        tempoMap: [
+          { measure: 1, bpm: 88 },       // pickup + measures 1–7
+          { measure: 9, bpm: 144 },       // pickup + measures 1–7
+        ]
+      },
+      {
+        id: "explained",
+        title: "12. Pharaoh's Dreams Explained",
+        basePath: "assets/",
+        tracks: [
+          { label: "Accompaniment",   file: "12 Pharaohs Dreams Explained Accompaniment.wav" },
+        ],
+        // Timeline/tempo for this song:
+        beatsPerMeasure: 4,              // set to 3 for 3/4, etc.
+        measuresTotal:   300,
+        tempoMap: [
+          { measure: 1, bpm: 88 },       // pickup + measures 1–7
+          { measure: 9, bpm: 144 },       // pickup + measures 1–7
+        ]
+      },
+      {
+        id: "crows",
+        title: "13. Stone the Crows",
+        basePath: "assets/",
+        tracks: [
+          { label: "Accompaniment",   file: "13 Stone the Crows Accompaniment.wav" },
+        ],
+        // Timeline/tempo for this song:
+        beatsPerMeasure: 4,              // set to 3 for 3/4, etc.
+        measuresTotal:   300,
+        tempoMap: [
+          { measure: 1, bpm: 88 },       // pickup + measures 1–7
+          { measure: 9, bpm: 144 },       // pickup + measures 1–7
+        ]
+      },
+      {
+        id: "canaan",
+        title: "14. Those Canaan Days",
+        basePath: "assets/",
+        tracks: [
+          { label: "Accompaniment",   file: "14 Those Canaan Days Accompaniment.wav" },
+        ],
+        // Timeline/tempo for this song:
+        beatsPerMeasure: 4,              // set to 3 for 3/4, etc.
+        measuresTotal:   300,
+        tempoMap: [
+          { measure: 1, bpm: 88 },       // pickup + measures 1–7
+          { measure: 9, bpm: 144 },       // pickup + measures 1–7
+        ]
+      },
+      {
+        id: "brothersgrovel",
+        title: "15. The Brothers Come to Egypt Grovel, Grovel",
+        basePath: "assets/",
+        tracks: [
+          { label: "Accompaniment",   file: "15 The Brothers Come to EgyptGrovel, Grovel Accompaniment.wav" },
+        ],
+        // Timeline/tempo for this song:
+        beatsPerMeasure: 4,              // set to 3 for 3/4, etc.
+        measuresTotal:   300,
+        tempoMap: [
+          { measure: 1, bpm: 88 },       // pickup + measures 1–7
+          { measure: 9, bpm: 144 },       // pickup + measures 1–7
+        ]
+      },
+      {
         id: "thief",
         title: "16. Who's the Thief",
         basePath: "assets/",
