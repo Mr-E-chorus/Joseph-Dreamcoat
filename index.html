@@ -824,5 +824,116 @@
       playPause();
     }
   </script>
+  <script>
+(() => {
+  // === Configuration ===
+  const WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbwFlOp0r_ERa6B13Gn_Y-YO_vC6IiHTBIMoxbur321jezIWloSaSe5ug3O53EdbWi8r4Q/exec';
+  const CLASS_LABEL = 'Joseph Cast Practice Challenge';  // change per page if you want
+
+  // === Lightweight "login" / user identification ===
+  // Privacy-friendly: no names/emails. Let students pick a code once; store in localStorage.
+  // Examples: lunch number hash, initials+last4 of student ID, or a teacher-issued alias.
+  function getUserId() {
+    const key = 'practice_user_id';
+    let id = localStorage.getItem(key);
+    if (!id) {
+      id = prompt('Enter your practice code (First Name, Last Initial):') || ('anon-' + Math.random().toString(36).slice(2));
+      localStorage.setItem(key, id);
+    }
+    return id.trim();
+  }
+
+  // === Session / timing state ===
+  const sessionId = crypto.randomUUID ? crypto.randomUUID() : (Date.now() + '-' + Math.random().toString(36).slice(2));
+  const userId = getUserId();
+  const userAgent = navigator.userAgent;
+  const referrer = document.referrer || '';
+  const pagePath = location.pathname;
+
+  // Attach to all audio players on the page
+  const players = Array.from(document.querySelectorAll('audio'));
+  const playing = new Map(); // player => { lastStart, accumulated }
+
+  async function logEvent({event, seconds = 0, trackId = '', trackTitle = ''}) {
+    try {
+      await fetch(WEBHOOK_URL, {
+        method: 'POST',
+        mode: 'no-cors', // GAS doesn't require CORS preflight; 'no-cors' avoids console noise
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: userId,
+          class: CLASS_LABEL,
+          event,
+          seconds,
+          track_id: trackId,
+          track_title: trackTitle,
+          session_id: sessionId,
+          user_agent: userAgent,
+          referrer,
+          page_path: pagePath
+        })
+      });
+    } catch (e) {
+      // swallow; logging failure shouldn't break playback
+      console.warn('Log failed', e);
+    }
+  }
+
+  // Helper to compute elapsed since lastStart
+  function flushTime(audio, reason) {
+    const state = playing.get(audio);
+    if (!state || state.lastStart == null) return 0;
+    const now = performance.now();
+    const deltaSec = Math.max(0, Math.round((now - state.lastStart) / 1000));
+    state.accumulated += deltaSec;
+    state.lastStart = null;
+    const trackId = audio.dataset.id || audio.currentSrc || '';
+    const trackTitle = audio.dataset.title || audio.getAttribute('title') || document.title;
+    logEvent({ event: reason, seconds: deltaSec, trackId, trackTitle });
+    return deltaSec;
+  }
+
+  function startTiming(audio) {
+    const state = playing.get(audio) || { lastStart: null, accumulated: 0 };
+    if (state.lastStart == null) {
+      state.lastStart = performance.now();
+      playing.set(audio, state);
+      const trackId = audio.dataset.id || audio.currentSrc || '';
+      const trackTitle = audio.dataset.title || audio.getAttribute('title') || document.title;
+      logEvent({ event: 'play', seconds: 0, trackId, trackTitle });
+    }
+  }
+
+  function pauseTiming(audio, reason='pause') {
+    flushTime(audio, reason);
+  }
+
+  // Wire up events
+  players.forEach(audio => {
+    audio.addEventListener('play', () => startTiming(audio));
+    audio.addEventListener('pause', () => pauseTiming(audio, 'pause'));
+    audio.addEventListener('ended', () => pauseTiming(audio, 'ended'));
+    // If they scrub or switch tracks, treat as a pause->play boundary
+    audio.addEventListener('seeking', () => pauseTiming(audio, 'seek'));
+  });
+
+  // Page/session lifecycle
+  logEvent({ event: 'session_start', seconds: 0 });
+
+  document.addEventListener('visibilitychange', () => {
+    // If they leave the tab, stop the clock; if they return and audio is still playing, restart.
+    if (document.hidden) {
+      players.forEach(a => { if (!a.paused) pauseTiming(a, 'tab_hidden'); });
+    } else {
+      players.forEach(a => { if (!a.paused) startTiming(a); });
+    }
+  });
+
+  window.addEventListener('beforeunload', () => {
+    players.forEach(a => { if (!a.paused) pauseTiming(a, 'unload'); });
+    logEvent({ event: 'session_end', seconds: 0 });
+  });
+})();
+</script>
 </body>
 </html>
