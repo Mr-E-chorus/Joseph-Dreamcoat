@@ -824,49 +824,44 @@
       playPause();
     }
   </script>
-  <script>
+<script>
 (() => {
-  // === Configuration ===
-  const WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbwFlOp0r_ERa6B13Gn_Y-YO_vC6IiHTBIMoxbur321jezIWloSaSe5ug3O53EdbWi8r4Q/exec';
-  const CLASS_LABEL = 'Joseph Cast Practice Challenge';  // change per page if you want
+  // === CONFIG ===
+  const WEBHOOK_URL = 'YOUR_WEB_APP_URL_HERE';
+  const CLASS_LABEL = 'Joseph Cast Practice Challenge';
 
-  // === Lightweight "login" / user identification ===
-  // Privacy-friendly: no names/emails. Let students pick a code once; store in localStorage.
-  // Examples: lunch number hash, initials+last4 of student ID, or a teacher-issued alias.
+  // === USER ID (stored locally, not sent each time) ===
   function getUserId() {
     const key = 'practice_user_id';
     let id = localStorage.getItem(key);
     if (!id) {
-      id = prompt('Enter your practice code (First Name, Last Initial):') || ('anon-' + Math.random().toString(36).slice(2));
+      id = prompt('Enter your practice code (NOT your full name or email):') || ('anon-' + Math.random().toString(36).slice(2));
       localStorage.setItem(key, id);
     }
     return id.trim();
   }
 
-  // === Session / timing state ===
-  const sessionId = crypto.randomUUID ? crypto.randomUUID() : (Date.now() + '-' + Math.random().toString(36).slice(2));
+  const sessionId =
+    (crypto.randomUUID && crypto.randomUUID()) ||
+    (Date.now() + '-' + Math.random().toString(36).slice(2));
   const userId = getUserId();
   const userAgent = navigator.userAgent;
   const referrer = document.referrer || '';
   const pagePath = location.pathname;
 
-  // Attach to all audio players on the page
-  const players = Array.from(document.querySelectorAll('audio'));
-  const playing = new Map(); // player => { lastStart, accumulated }
-
-  async function logEvent({event, seconds = 0, trackId = '', trackTitle = ''}) {
+  async function logEvent({ event, seconds = 0, trackId = '', trackTitle = '' }) {
     try {
       await fetch(WEBHOOK_URL, {
         method: 'POST',
-        mode: 'no-cors', // GAS doesn't require CORS preflight; 'no-cors' avoids console noise
+        mode: 'no-cors',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           user_id: userId,
           class: CLASS_LABEL,
           event,
-          seconds,
           track_id: trackId,
           track_title: trackTitle,
+          seconds: seconds,
           session_id: sessionId,
           user_agent: userAgent,
           referrer,
@@ -874,63 +869,102 @@
         })
       });
     } catch (e) {
-      // swallow; logging failure shouldn't break playback
       console.warn('Log failed', e);
     }
   }
 
-  // Helper to compute elapsed since lastStart
-  function flushTime(audio, reason) {
-    const state = playing.get(audio);
-    if (!state || state.lastStart == null) return 0;
-    const now = performance.now();
-    const deltaSec = Math.max(0, Math.round((now - state.lastStart) / 1000));
-    state.accumulated += deltaSec;
-    state.lastStart = null;
-    const trackId = audio.dataset.id || audio.currentSrc || '';
-    const trackTitle = audio.dataset.title || audio.getAttribute('title') || document.title;
-    logEvent({ event: reason, seconds: deltaSec, trackId, trackTitle });
-    return deltaSec;
+  // === TIMING STATE PER AUDIO ELEMENT ===
+  const playing = new Map(); // audio -> { lastStart, accumulated }
+
+  function trackInfo(audio) {
+    return {
+      trackId: audio.dataset.id || audio.currentSrc || '',
+      trackTitle: audio.dataset.title || audio.getAttribute('title') || document.title
+    };
   }
 
   function startTiming(audio) {
-    const state = playing.get(audio) || { lastStart: null, accumulated: 0 };
+    let state = playing.get(audio);
+    if (!state) {
+      state = { lastStart: null, accumulated: 0 };
+      playing.set(audio, state);
+    }
     if (state.lastStart == null) {
       state.lastStart = performance.now();
-      playing.set(audio, state);
-      const trackId = audio.dataset.id || audio.currentSrc || '';
-      const trackTitle = audio.dataset.title || audio.getAttribute('title') || document.title;
+      const { trackId, trackTitle } = trackInfo(audio);
       logEvent({ event: 'play', seconds: 0, trackId, trackTitle });
     }
   }
 
-  function pauseTiming(audio, reason='pause') {
+  function flushTime(audio, reason) {
+    const state = playing.get(audio);
+    if (!state || state.lastStart == null) return;
+
+    const now = performance.now();
+    const deltaSec = Math.max(0, Math.round((now - state.lastStart) / 1000));
+    state.accumulated += deltaSec;
+    state.lastStart = null;
+
+    const { trackId, trackTitle } = trackInfo(audio);
+    logEvent({ event: reason, seconds: deltaSec, trackId, trackTitle });
+  }
+
+  function pauseTiming(audio, reason) {
     flushTime(audio, reason);
   }
 
-  // Wire up events
-  players.forEach(audio => {
+  // === ATTACH TO AUDIO ELEMENTS ===
+  function attachToAudio(audio) {
+    if (audio.__practiceLoggerAttached) return;
+    audio.__practiceLoggerAttached = true;
+
     audio.addEventListener('play', () => startTiming(audio));
     audio.addEventListener('pause', () => pauseTiming(audio, 'pause'));
     audio.addEventListener('ended', () => pauseTiming(audio, 'ended'));
-    // If they scrub or switch tracks, treat as a pause->play boundary
     audio.addEventListener('seeking', () => pauseTiming(audio, 'seek'));
+  }
+
+  function attachToAllAudio() {
+    document.querySelectorAll('audio').forEach(attachToAudio);
+  }
+
+  // Attach to any audio tags already on the page
+  window.addEventListener('load', attachToAllAudio);
+
+  // Also catch audio elements that are created later via JS
+  const observer = new MutationObserver(mutations => {
+    for (const m of mutations) {
+      m.addedNodes.forEach(node => {
+        if (node.tagName === 'AUDIO') {
+          attachToAudio(node);
+        } else if (node.querySelectorAll) {
+          node.querySelectorAll('audio').forEach(attachToAudio);
+        }
+      });
+    }
   });
 
-  // Page/session lifecycle
+  observer.observe(document.body, { childList: true, subtree: true });
+
+  // === SESSION LIFECYCLE ===
   logEvent({ event: 'session_start', seconds: 0 });
 
   document.addEventListener('visibilitychange', () => {
-    // If they leave the tab, stop the clock; if they return and audio is still playing, restart.
     if (document.hidden) {
-      players.forEach(a => { if (!a.paused) pauseTiming(a, 'tab_hidden'); });
+      document.querySelectorAll('audio').forEach(a => {
+        if (!a.paused) pauseTiming(a, 'tab_hidden');
+      });
     } else {
-      players.forEach(a => { if (!a.paused) startTiming(a); });
+      document.querySelectorAll('audio').forEach(a => {
+        if (!a.paused) startTiming(a);
+      });
     }
   });
 
   window.addEventListener('beforeunload', () => {
-    players.forEach(a => { if (!a.paused) pauseTiming(a, 'unload'); });
+    document.querySelectorAll('audio').forEach(a => {
+      if (!a.paused) pauseTiming(a, 'unload');
+    });
     logEvent({ event: 'session_end', seconds: 0 });
   });
 })();
