@@ -559,6 +559,88 @@
     let totalScoreTime = 0;
     let pickupDuration = 0;
 
+        // --------------- PRACTICE LOGGING ---------------
+    const WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbwFlOp0r_ERa6B13Gn_Y-YO_vC6IiHTBIMoxbur321jezIWloSaSe5ug3O53EdbWi8r4Q/exec';
+    const CLASS_LABEL = 'Joseph Cast Practice Challenge';
+
+    function getUserId() {
+      const key = 'practice_user_id';
+      let id = localStorage.getItem(key);
+      if (!id) {
+        id =
+          prompt('Enter your practice code (NOT your full name or email):') ||
+          ('anon-' + Math.random().toString(36).slice(2));
+        localStorage.setItem(key, id);
+      }
+      return id.trim();
+    }
+
+    const practiceSessionId =
+      (crypto.randomUUID && crypto.randomUUID()) ||
+      (Date.now() + '-' + Math.random().toString(36).slice(2));
+    const practiceUserId = getUserId();
+    const practiceUserAgent = navigator.userAgent;
+    const practiceReferrer = document.referrer || '';
+    const practicePagePath = location.pathname;
+
+    let practiceLastStart = null; // performance.now() when last Play began
+
+    async function logPracticeEvent({ event, seconds = 0, trackId = '', trackTitle = '' }) {
+      try {
+        await fetch(WEBHOOK_URL, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            user_id: practiceUserId,
+            class: CLASS_LABEL,
+            event,
+            track_id: trackId,
+            track_title: trackTitle,
+            seconds,
+            session_id: practiceSessionId,
+            user_agent: practiceUserAgent,
+            referrer: practiceReferrer,
+            page_path: practicePagePath
+          })
+        });
+      } catch (e) {
+        console.warn('Practice log failed', e);
+      }
+    }
+
+    function currentTrackInfo() {
+      return {
+        trackId: currentSong ? currentSong.id : '',
+        trackTitle: currentSong ? currentSong.title : document.title
+      };
+    }
+
+    function startPracticeTimer(reason = 'play') {
+      if (practiceLastStart != null) return; // already timing
+      practiceLastStart = performance.now();
+      const { trackId, trackTitle } = currentTrackInfo();
+      logPracticeEvent({ event: reason, seconds: 0, trackId, trackTitle });
+    }
+
+    function stopPracticeTimer(reason) {
+      if (practiceLastStart == null) return;
+      const now = performance.now();
+      const deltaSec = Math.max(0, Math.round((now - practiceLastStart) / 1000));
+      practiceLastStart = null;
+      const { trackId, trackTitle } = currentTrackInfo();
+      logPracticeEvent({ event: reason, seconds: deltaSec, trackId, trackTitle });
+    }
+
+    // Log session start right away
+    logPracticeEvent({ event: 'session_start', seconds: 0 });
+
+    window.addEventListener('beforeunload', () => {
+      // if they're still playing when they close the tab, log the remaining time
+      stopPracticeTimer('unload');
+      logPracticeEvent({ event: 'session_end', seconds: 0 });
+    });
+
     // --------------- SONG BOOTSTRAP ---------------
     function bootstrapSongs() {
       // populate menu
@@ -732,12 +814,13 @@
       }
     }
 
-    async function playPause() {
+        async function playPause() {
       if (channel.length === 0) return;
       await ensureContext();
 
       const btn = document.getElementById("play-pause");
       if (!isPlaying) {
+        // STARTING playback
         if (!Number.isFinite(offset) || offset < 0) offset = 0;
         startTime = audioContext.currentTime - offset;
         sources = channel.map(ch => {
@@ -749,23 +832,37 @@
         });
         isPlaying = true;
         btn.textContent = "Pause";
+
+        // >>> PRACTICE LOGGER
+        startPracticeTimer('play');
+
         animateProgress();
       } else {
+        // PAUSING playback
         const elapsed = audioContext.currentTime - startTime;
         offset = Number.isFinite(elapsed) ? Math.max(0, elapsed) : 0;
         sources.forEach(src => { try { src.stop(); } catch(_){} });
         sources = [];
         isPlaying = false;
         btn.textContent = "Play";
+
+        // >>> PRACTICE LOGGER
+        stopPracticeTimer('pause');
       }
     }
 
-    function stopAll(silent=false) {
-      if (sources && sources.length) sources.forEach(src => { try { src.stop(); } catch(_){} });
+        function stopAll(silent=false) {
+      if (sources && sources.length) {
+        sources.forEach(src => { try { src.stop(); } catch(_){} });
+      }
       sources = [];
       isPlaying = false;
       offset = 0;
       startTime = audioContext ? audioContext.currentTime : 0;
+
+      // >>> PRACTICE LOGGER
+      stopPracticeTimer('stop');
+
       if (!silent) {
         document.getElementById("play-pause").textContent = "Play";
         const bar = document.getElementById("progress-bar");
@@ -813,170 +910,21 @@
       jumpToMeasureNumber(m);
     }
 
-    function jumpToMeasureNumber(measureNumber) {
+           function jumpToMeasureNumber(measureNumber) {
       const time = measureStartTimes[measureNumber] ?? pickupDuration;
       offset = time;
+
       if (isPlaying && sources && sources.length) {
         sources.forEach(src => { try { src.stop(); } catch(_){} });
         sources = [];
         isPlaying = false;
+
+        // >>> PRACTICE LOGGER
+        stopPracticeTimer('seek');
       }
-      playPause();
+
+      playPause(); // this will start a new play segment (and startPracticeTimer)
     }
   </script>
-<script>
-(() => {
-  // === CONFIG ===
-  const WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbwFlOp0r_ERa6B13Gn_Y-YO_vC6IiHTBIMoxbur321jezIWloSaSe5ug3O53EdbWi8r4Q/exec';
-  const CLASS_LABEL = 'Joseph Cast Practice Challenge';
-
-  // === USER ID (stored locally, not their real name/email) ===
-  function getUserId() {
-    const key = 'practice_user_id';
-    let id = localStorage.getItem(key);
-    if (!id) {
-      id =
-        prompt('Enter your practice code (NOT your full name or email):') ||
-        ('anon-' + Math.random().toString(36).slice(2));
-      localStorage.setItem(key, id);
-    }
-    return id.trim();
-  }
-
-  const sessionId =
-    (crypto.randomUUID && crypto.randomUUID()) ||
-    (Date.now() + '-' + Math.random().toString(36).slice(2));
-  const userId = getUserId();
-  const userAgent = navigator.userAgent;
-  const referrer = document.referrer || '';
-  const pagePath = location.pathname;
-
-  async function logEvent({ event, seconds = 0, trackId = '', trackTitle = '' }) {
-    try {
-      await fetch(WEBHOOK_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          user_id: userId,
-          class: CLASS_LABEL,
-          event,
-          track_id: trackId,
-          track_title: trackTitle,
-          seconds,
-          session_id: sessionId,
-          user_agent: userAgent,
-          referrer,
-          page_path: pagePath
-        })
-      });
-    } catch (e) {
-      console.warn('Log failed', e);
-    }
-  }
-
-  // === STATE FOR EVERY MEDIA ELEMENT (audio/video) ===
-  const stateMap = new WeakMap(); // HTMLMediaElement -> { lastStart, accumulated }
-
-  function getTrackInfo(el) {
-    return {
-      trackId: (el.dataset && el.dataset.id) || el.currentSrc || '',
-      trackTitle:
-        (el.dataset && el.dataset.title) ||
-        el.getAttribute('title') ||
-        document.title
-    };
-  }
-
-  function ensureState(el) {
-    let st = stateMap.get(el);
-    if (!st) {
-      st = { lastStart: null, accumulated: 0 };
-      stateMap.set(el, st);
-    }
-    return st;
-  }
-
-  function startTiming(el) {
-    const st = ensureState(el);
-    if (st.lastStart == null) {
-      st.lastStart = performance.now();
-      const { trackId, trackTitle } = getTrackInfo(el);
-      logEvent({ event: 'play', seconds: 0, trackId, trackTitle });
-    }
-  }
-
-  function flushTime(el, reason) {
-    const st = stateMap.get(el);
-    if (!st || st.lastStart == null) return;
-
-    const now = performance.now();
-    const deltaSec = Math.max(0, Math.round((now - st.lastStart) / 1000));
-    st.accumulated += deltaSec;
-    st.lastStart = null;
-
-    const { trackId, trackTitle } = getTrackInfo(el);
-    logEvent({ event: reason, seconds: deltaSec, trackId, trackTitle });
-  }
-
-  function pauseTiming(el, reason) {
-    flushTime(el, reason);
-  }
-
-  // === HOOK NATIVE play()/pause() FOR ALL AUDIO/VIDEO ===
-  const MediaProto = (typeof HTMLMediaElement !== 'undefined')
-    ? HTMLMediaElement.prototype
-    : null;
-
-  if (MediaProto) {
-    const origPlay = MediaProto.play;
-    const origPause = MediaProto.pause;
-
-    MediaProto.play = function (...args) {
-      try { startTiming(this); } catch (e) { console.warn('play hook error', e); }
-      return origPlay.apply(this, args);
-    };
-
-    MediaProto.pause = function (...args) {
-      try { pauseTiming(this, 'pause'); } catch (e) { console.warn('pause hook error', e); }
-      return origPause.apply(this, args);
-    };
-
-    // Ended events
-    document.addEventListener('ended', ev => {
-      const el = ev.target;
-      if (el instanceof HTMLMediaElement) pauseTiming(el, 'ended');
-    }, true);
-
-    // Seeking
-    document.addEventListener('seeking', ev => {
-      const el = ev.target;
-      if (el instanceof HTMLMediaElement) pauseTiming(el, 'seek');
-    }, true);
-  }
-
-  // === SESSION LIFECYCLE ===
-  logEvent({ event: 'session_start', seconds: 0 });
-
-  document.addEventListener('visibilitychange', () => {
-    if (document.hidden) {
-      document.querySelectorAll('audio,video').forEach(el => {
-        if (!el.paused) pauseTiming(el, 'tab_hidden');
-      });
-    } else {
-      document.querySelectorAll('audio,video').forEach(el => {
-        if (!el.paused) startTiming(el);
-      });
-    }
-  });
-
-  window.addEventListener('beforeunload', () => {
-    document.querySelectorAll('audio,video').forEach(el => {
-      if (!el.paused) pauseTiming(el, 'unload');
-    });
-    logEvent({ event: 'session_end', seconds: 0 });
-  });
-})();
-</script>
 </body>
 </html>
