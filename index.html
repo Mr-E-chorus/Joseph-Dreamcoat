@@ -830,12 +830,14 @@
   const WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbwFlOp0r_ERa6B13Gn_Y-YO_vC6IiHTBIMoxbur321jezIWloSaSe5ug3O53EdbWi8r4Q/exec';
   const CLASS_LABEL = 'Joseph Cast Practice Challenge';
 
-  // === USER ID (stored locally, not sent each time) ===
+  // === USER ID (stored locally, not their real name/email) ===
   function getUserId() {
     const key = 'practice_user_id';
     let id = localStorage.getItem(key);
     if (!id) {
-      id = prompt('Enter your practice code (NOT your full name or email):') || ('anon-' + Math.random().toString(36).slice(2));
+      id =
+        prompt('Enter your practice code (NOT your full name or email):') ||
+        ('anon-' + Math.random().toString(36).slice(2));
       localStorage.setItem(key, id);
     }
     return id.trim();
@@ -861,7 +863,7 @@
           event,
           track_id: trackId,
           track_title: trackTitle,
-          seconds: seconds,
+          seconds,
           session_id: sessionId,
           user_agent: userAgent,
           referrer,
@@ -873,97 +875,104 @@
     }
   }
 
-  // === TIMING STATE PER AUDIO ELEMENT ===
-  const playing = new Map(); // audio -> { lastStart, accumulated }
+  // === STATE FOR EVERY MEDIA ELEMENT (audio/video) ===
+  const stateMap = new WeakMap(); // HTMLMediaElement -> { lastStart, accumulated }
 
-  function trackInfo(audio) {
+  function getTrackInfo(el) {
     return {
-      trackId: audio.dataset.id || audio.currentSrc || '',
-      trackTitle: audio.dataset.title || audio.getAttribute('title') || document.title
+      trackId: (el.dataset && el.dataset.id) || el.currentSrc || '',
+      trackTitle:
+        (el.dataset && el.dataset.title) ||
+        el.getAttribute('title') ||
+        document.title
     };
   }
 
-  function startTiming(audio) {
-    let state = playing.get(audio);
-    if (!state) {
-      state = { lastStart: null, accumulated: 0 };
-      playing.set(audio, state);
+  function ensureState(el) {
+    let st = stateMap.get(el);
+    if (!st) {
+      st = { lastStart: null, accumulated: 0 };
+      stateMap.set(el, st);
     }
-    if (state.lastStart == null) {
-      state.lastStart = performance.now();
-      const { trackId, trackTitle } = trackInfo(audio);
+    return st;
+  }
+
+  function startTiming(el) {
+    const st = ensureState(el);
+    if (st.lastStart == null) {
+      st.lastStart = performance.now();
+      const { trackId, trackTitle } = getTrackInfo(el);
       logEvent({ event: 'play', seconds: 0, trackId, trackTitle });
     }
   }
 
-  function flushTime(audio, reason) {
-    const state = playing.get(audio);
-    if (!state || state.lastStart == null) return;
+  function flushTime(el, reason) {
+    const st = stateMap.get(el);
+    if (!st || st.lastStart == null) return;
 
     const now = performance.now();
-    const deltaSec = Math.max(0, Math.round((now - state.lastStart) / 1000));
-    state.accumulated += deltaSec;
-    state.lastStart = null;
+    const deltaSec = Math.max(0, Math.round((now - st.lastStart) / 1000));
+    st.accumulated += deltaSec;
+    st.lastStart = null;
 
-    const { trackId, trackTitle } = trackInfo(audio);
+    const { trackId, trackTitle } = getTrackInfo(el);
     logEvent({ event: reason, seconds: deltaSec, trackId, trackTitle });
   }
 
-  function pauseTiming(audio, reason) {
-    flushTime(audio, reason);
+  function pauseTiming(el, reason) {
+    flushTime(el, reason);
   }
 
-  // === ATTACH TO AUDIO ELEMENTS ===
-  function attachToAudio(audio) {
-    if (audio.__practiceLoggerAttached) return;
-    audio.__practiceLoggerAttached = true;
+  // === HOOK NATIVE play()/pause() FOR ALL AUDIO/VIDEO ===
+  const MediaProto = (typeof HTMLMediaElement !== 'undefined')
+    ? HTMLMediaElement.prototype
+    : null;
 
-    audio.addEventListener('play', () => startTiming(audio));
-    audio.addEventListener('pause', () => pauseTiming(audio, 'pause'));
-    audio.addEventListener('ended', () => pauseTiming(audio, 'ended'));
-    audio.addEventListener('seeking', () => pauseTiming(audio, 'seek'));
+  if (MediaProto) {
+    const origPlay = MediaProto.play;
+    const origPause = MediaProto.pause;
+
+    MediaProto.play = function (...args) {
+      try { startTiming(this); } catch (e) { console.warn('play hook error', e); }
+      return origPlay.apply(this, args);
+    };
+
+    MediaProto.pause = function (...args) {
+      try { pauseTiming(this, 'pause'); } catch (e) { console.warn('pause hook error', e); }
+      return origPause.apply(this, args);
+    };
+
+    // Ended events
+    document.addEventListener('ended', ev => {
+      const el = ev.target;
+      if (el instanceof HTMLMediaElement) pauseTiming(el, 'ended');
+    }, true);
+
+    // Seeking
+    document.addEventListener('seeking', ev => {
+      const el = ev.target;
+      if (el instanceof HTMLMediaElement) pauseTiming(el, 'seek');
+    }, true);
   }
-
-  function attachToAllAudio() {
-    document.querySelectorAll('audio').forEach(attachToAudio);
-  }
-
-  // Attach to any audio tags already on the page
-  window.addEventListener('load', attachToAllAudio);
-
-  // Also catch audio elements that are created later via JS
-  const observer = new MutationObserver(mutations => {
-    for (const m of mutations) {
-      m.addedNodes.forEach(node => {
-        if (node.tagName === 'AUDIO') {
-          attachToAudio(node);
-        } else if (node.querySelectorAll) {
-          node.querySelectorAll('audio').forEach(attachToAudio);
-        }
-      });
-    }
-  });
-
-  observer.observe(document.body, { childList: true, subtree: true });
 
   // === SESSION LIFECYCLE ===
   logEvent({ event: 'session_start', seconds: 0 });
 
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
-      document.querySelectorAll('audio').forEach(a => {
-        if (!a.paused) pauseTiming(a, 'tab_hidden');
+      document.querySelectorAll('audio,video').forEach(el => {
+        if (!el.paused) pauseTiming(el, 'tab_hidden');
       });
     } else {
-      document.querySelectorAll('audio').forEach(a => {
-        if (!a.paused) startTiming(a);
+      document.querySelectorAll('audio,video').forEach(el => {
+        if (!el.paused) startTiming(el);
       });
     }
   });
 
   window.addEventListener('beforeunload', () => {
-    document.querySelectorAll('audio').forEach(a => {
-      if (!a.paused) pauseTiming(a, 'unload');
+    document.querySelectorAll('audio,video').forEach(el => {
+      if (!el.paused) pauseTiming(el, 'unload');
     });
     logEvent({ event: 'session_end', seconds: 0 });
   });
