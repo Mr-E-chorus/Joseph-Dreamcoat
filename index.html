@@ -559,7 +559,7 @@
     let totalScoreTime = 0;
     let pickupDuration = 0;
 
-        // --------------- PRACTICE LOGGING ---------------
+    // --------------- PRACTICE LOGGING ---------------
     const WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbwFlOp0r_ERa6B13Gn_Y-YO_vC6IiHTBIMoxbur321jezIWloSaSe5ug3O53EdbWi8r4Q/exec';
     const CLASS_LABEL = 'Joseph Cast Practice Challenge';
 
@@ -585,7 +585,7 @@
 
     let practiceLastStart = null; // performance.now() when last Play began
 
-    async function logPracticeEvent({ event, seconds = 0, trackId = '', trackTitle = '' }) {
+        async function logPracticeEvent({ event, seconds = 0, trackId = '', trackTitle = '' }) {
       try {
         await fetch(WEBHOOK_URL, {
           method: 'POST',
@@ -607,6 +607,15 @@
       } catch (e) {
         console.warn('Practice log failed', e);
       }
+    }
+
+    function logDebug(label) {
+      logPracticeEvent({
+        event: 'debug_' + label,
+        seconds: 0,
+        trackId: currentSong ? currentSong.id : '',
+        trackTitle: currentSong ? currentSong.title : document.title
+      });
     }
 
     function currentTrackInfo() {
@@ -814,10 +823,12 @@
       }
     }
 
-        async function playPause() {
+       async function playPause() {
+      logDebug('playPause_clicked');
+
       if (channel.length === 0) return;
       await ensureContext();
-
+         
       const btn = document.getElementById("play-pause");
       if (!isPlaying) {
         // STARTING playback
@@ -852,6 +863,8 @@
     }
 
         function stopAll(silent=false) {
+          logDebug('stopAll_called');
+          
       if (sources && sources.length) {
         sources.forEach(src => { try { src.stop(); } catch(_){} });
       }
@@ -911,6 +924,8 @@
     }
 
            function jumpToMeasureNumber(measureNumber) {
+      logDebug('jumpToMeasureNumber_' + measureNumber);
+
       const time = measureStartTimes[measureNumber] ?? pickupDuration;
       offset = time;
 
