@@ -78,6 +78,10 @@
     <p id="access-denied">Access Denied</p>
   </div>
 
+  <button id="change-code" class="btn small">
+  Change Practice Code
+  </button>
+
   <div id="player"></div>
 
   <script>
@@ -104,7 +108,7 @@
       bootstrapSongs(); // build menu and load the first song
     }
 
-    function showAppUI() {
+        function showAppUI() {
       document.getElementById("song-picker").style.display = "block";
       document.getElementById("main-controls").style.display = "block";
       document.getElementById("track-title").style.display = "block";
@@ -112,8 +116,14 @@
       document.getElementById("timeline").style.display = "block";
       document.getElementById("jump-controls").style.display = "block";
       document.getElementById("player").style.display = "block";
+
       document.getElementById("play-pause").addEventListener("click", playPause);
       document.getElementById("stop").addEventListener("click", stopAll);
+
+      const changeCodeBtn = document.getElementById("change-code");
+      if (changeCodeBtn) {
+        changeCodeBtn.addEventListener("click", resetPracticeCode);
+      }
     }
 
     // --------------- SONG LIBRARY ---------------
@@ -563,7 +573,7 @@
     const WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbwFlOp0r_ERa6B13Gn_Y-YO_vC6IiHTBIMoxbur321jezIWloSaSe5ug3O53EdbWi8r4Q/exec';
     const CLASS_LABEL = 'Joseph Cast Practice Challenge';
 
-    function getUserId() {
+        function getUserId() {
       const key = 'practice_user_id';
       let id = localStorage.getItem(key);
       if (!id) {
@@ -574,6 +584,13 @@
       }
       return id.trim();
     }
+
+    function resetPracticeCode() {
+      localStorage.removeItem('practice_user_id');
+      alert('Practice code cleared. The page will reload so you can enter a new one.');
+      location.reload();
+    }
+
 
     const practiceSessionId =
       (crypto.randomUUID && crypto.randomUUID()) ||
