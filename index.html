@@ -236,12 +236,13 @@
           { label: "Narrator",        file: "6 Journey to Egypt Narrator.wav" },
         ],
         // Timeline/tempo for this song:
-        beatsPerMeasureMap: [
+        meterMap: [
            { measure: 1, beatsPerMeasure: 5 },              // set to 3 for 3/4, etc.
            { measure: 17, beatsPerMeasure: 4 },
            { measure: 39, beatsPerMeasure: 3 },
            { measure: 50, beatsPerMeasure: 7 },
            { measure: 58, beatsPerMeasure: 4 },
+          ],
         measuresTotal:   60,
         tempoMap: [
           { measure: 1, bpm: 166 },       // pickup + measures 1–7
@@ -249,7 +250,7 @@
           { measure: 39, bpm: 80 },       // pickup + measures 1–7
           { measure: 50, bpm: 180 },       // pickup + measures 1–7
           { measure: 58, bpm: 60 },       // pickup + measures 1–7
-        ]
+        ],
       },
       {
         id: "potiphar",
@@ -761,6 +762,21 @@
       }
       return bpm;
     }
+    
+    function beatsAtMeasure(m, cfg) {
+  // If no meter map, fall back to a constant beatsPerMeasure (default 4)
+  const fallback = Number.isFinite(cfg.beatsPerMeasure) ? cfg.beatsPerMeasure : 4;
+
+  const map = cfg.meterMap || cfg.beatsPerMeasureMap; // supports either property name
+  if (!Array.isArray(map) || map.length === 0) return fallback;
+
+  let beats = map[0].beats ?? map[0].beatsPerMeasure ?? fallback;
+  for (let i = 0; i < map.length; i++) {
+    if (map[i].measure <= m) beats = map[i].beats ?? map[i].beatsPerMeasure ?? beats;
+    else break;
+  }
+  return beats;
+}
 
     function buildTimingFromConfig(cfg) {
       const firstBpm = bpmAtMeasure(1, cfg.tempoMap);
@@ -770,7 +786,7 @@
       let t = pickupDuration; // measure 1 begins after pickup
       for (let m = 1; m <= cfg.measuresTotal; m++) {
         measureStartTimes[m] = t;
-        const dur = cfg.beatsPerMeasure * (60 / bpmAtMeasure(m, cfg.tempoMap));
+        const dur = beatsAtMeasure(m, cfg) * (60 / bpmAtMeasure(m, cfg.tempoMap));
         t += dur;
       }
       measureStartTimes[cfg.measuresTotal + 1] = t; // sentinel
@@ -792,7 +808,8 @@
       const start = measureStartTimes[m];
       const end = measureStartTimes[m + 1] ?? totalScoreTime;
       const frac = Math.min(0.999, Math.max(0, (t - start) / (end - start)));
-      const beat = Math.min(cfg.beatsPerMeasure, Math.floor(frac * cfg.beatsPerMeasure) + 1);
+      const beatsThisMeasure = beatsAtMeasure(m, cfg);
+      const beat = Math.min(beatsThisMeasure, Math.floor(frac * beatsThisMeasure) + 1);
 
       return { inPickup: false, measure: m, beat, fracWithinMeasure: frac };
     }
@@ -958,11 +975,15 @@
         if (pos.inPickup) {
           document.getElementById("timer").textContent = "Pickup";
           bar.style.left = "0px";
-        } else {
-          document.getElementById("timer").textContent = `Measure ${pos.measure}, Beat ${pos.beat}`;
-          const px = ((pos.measure - 1) + pos.fracWithinMeasure) * 34;
-          bar.style.left = `${px}px`;
-        }
+         } else {
+  const beatsThisMeasure = beatsAtMeasure(pos.measure, currentSong);
+  document.getElementById("timer").textContent =
+    `Measure ${pos.measure}, Beat ${pos.beat} (${beatsThisMeasure} beats)`;
+
+  const px = ((pos.measure - 1) + pos.fracWithinMeasure) * 34;
+  bar.style.left = `${px}px`;
+}
+
         requestAnimationFrame(update);
       };
       update();
