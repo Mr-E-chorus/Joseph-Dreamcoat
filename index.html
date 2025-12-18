@@ -4,8 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="theme-color" content="#111827" />
- <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Practice Player" />
   <title>Joseph and the Amazing Technicolor Dreamcoat Practice Tracks</title>
@@ -138,8 +138,13 @@
     const correctPassword = "G0G0Broseph!";
     const pwRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^\\w\\s]).{12,}$/;
 
-    document.getElementById("pw-submit").addEventListener("click", checkPassword);
-    document.getElementById("password-input").addEventListener("keydown", (e) => { if (e.key === "Enter") checkPassword(); });
+    window.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("pw-submit").addEventListener("click", checkPassword);
+  document.getElementById("password-input").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") checkPassword();
+  });
+});
+
 
     function checkPassword() {
       const input = (document.getElementById("password-input").value || "").trim();
