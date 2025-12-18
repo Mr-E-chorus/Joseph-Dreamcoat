@@ -136,7 +136,7 @@
   <script>
     // ---------------- AUTH ----------------
     const correctPassword = "G0G0Broseph!";
-    const pwRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^\\w\\s]).{12,}$/;
+    const pwRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\w\s]).{12,}$/;
 
     window.addEventListener("DOMContentLoaded", () => {
   document.getElementById("pw-submit").addEventListener("click", checkPassword);
