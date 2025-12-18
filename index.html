@@ -147,18 +147,23 @@
 
 
     function checkPassword() {
-      const input = (document.getElementById("password-input").value || "").trim();
-      const err = document.getElementById("pw-error");
-      const ok  = document.getElementById("pw-success");
-      err.style.display = "none"; ok.style.display = "none";
-      if (!pwRegex.test(input)) { err.style.display = "block"; return; }
-      if (input !== correctPassword) { err.style.display = "block"; return; }
+  const input = (document.getElementById("password-input").value || "").trim();
+  const err = document.getElementById("pw-error");
+  const ok  = document.getElementById("pw-success");
+  err.style.display = "none"; 
+  ok.style.display = "none";
 
-      ok.style.display = "block";
-      document.getElementById("password-gate").style.display = "none";
-      showAppUI();
-      bootstrapSongs();
-    }
+  if (input !== correctPassword) { 
+    err.textContent = "Incorrect password.";
+    err.style.display = "block"; 
+    return; 
+  }
+
+  ok.style.display = "block";
+  document.getElementById("password-gate").style.display = "none";
+  showAppUI();
+  bootstrapSongs();
+}
 
     function showAppUI() {
       document.getElementById("song-picker").style.display = "block";
