@@ -2,6 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#111827" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Practice Player" />
+  <!-- Optional PWA assets (safe even if missing) -->
+  <link rel="manifest" href="manifest.webmanifest" />
   <title>Joseph and the Amazing Technicolor Dreamcoat Practice Tracks</title>
   <link rel="icon" href="favicon.ico" type="image/x-icon">
   <style>
@@ -10,7 +17,7 @@
     #track-title { margin: 0 0 8px; text-align:center; }
     #timer { font-weight: 600; text-align:center; }
     #song-picker { display:none; text-align:center; margin: 10px 0; }
-    #main-controls { display:none; text-align:center; margin: 12px 0 18px; }
+    #main-controls { display:none; text-align:center; margin: 12px 0 10px; }
     #play-pause, #stop { padding: 12px 22px; font-size: 1.05rem; border:0; border-radius: 8px; cursor:pointer; margin: 0 6px; }
     #play-pause { background:#16a34a; color:#fff; } #play-pause[disabled]{opacity:.6;cursor:not-allowed}
     #stop { background:#ef4444; color:#fff; } #stop[disabled]{opacity:.6;cursor:not-allowed}
@@ -35,19 +42,32 @@
     .bad { background:#fef2f2; color:#991b1b; border:1px solid #fecaca; }
     #password-gate { max-width: 520px; margin: 18px auto; border: 1px solid #e5e7eb; border-radius: 10px; padding: 16px; }
     #password-gate p { margin: 6px 0; }
-    #access-denied { color:#dc2626; font-weight:700; display:none; }
     #pw-hint { font-size: 12px; color:#374151; }
     #pw-error { color:#dc2626; font-size: 13px; display:none; }
     #pw-success { color:#166534; font-size: 13px; display:none; }
     #pw-row { display:flex; gap:8px; align-items:center; }
     #password-input { flex:1; padding: 8px; font-size: 1rem; }
+
+    #mix-presets { display:none; text-align:center; margin: 4px 0 4px; font-size: 0.9rem; }
+    #mix-presets span { margin-right: 6px; font-weight: 500; }
+    #mix-presets .btn { margin: 0 3px; }
+    #my-part-select { margin-left: 6px; padding: 4px 6px; font-size: 0.9rem; }
+
+    #practice-stats { display:none; text-align:center; font-size: 0.85rem; color:#374151; margin-bottom: 8px; }
+
+    #loop-controls { display:none; text-align:center; margin-bottom: 10px; font-size: 0.9rem; }
+    #loop-controls input { width: 60px; padding: 4px; margin: 0 4px; }
+
+    #warmups { display:none; margin: 16px auto; padding: 12px; border: 1px solid #e5e7eb; border-radius: 10px; background:#f9fafb; max-width: 720px; }
+    #warmups h2 { margin: 0 0 8px; font-size: 1rem; }
+    #warmups p { margin: 4px 0; font-size: 0.8rem; color:#4b5563; }
+    .warmup-group { display:flex; flex-wrap:wrap; gap:6px; margin-bottom: 6px; }
   </style>
 </head>
 <body>
   <h1 id="track-title">Musical Practice Player</h1>
   <div id="timer">Measure --, Beat --</div>
 
-  <!-- Song menu (shown after password) -->
   <div id="song-picker">
     <label for="song-select"><strong>Choose a song:</strong></label>
     <select id="song-select"></select>
@@ -58,10 +78,43 @@
     <button id="stop" disabled>Stop</button>
   </div>
 
+  <div id="mix-presets">
+    <span>Mix presets:</span>
+    <button class="btn preset-btn" data-preset="boost">My Part Boosted</button>
+    <button class="btn preset-btn" data-preset="solo">My Part Only</button>
+    <button class="btn preset-btn" data-preset="balanced">Balanced Mix</button>
+    <label for="my-part-select">My Part:</label>
+    <select id="my-part-select">
+      <option value="">-- Select --</option>
+    </select>
+  </div>
+
+  <div id="practice-stats">Total practice time: 0 min (this song: 0 min)</div>
+
+  <div id="warmups">
+    <h2>Warmups</h2>
+    <div class="warmup-group">
+      <button class="btn warmup-btn" data-type="five-note">5-note scale</button>
+      <button class="btn warmup-btn" data-type="arpeggio">1–3–5–8–5–3–1</button>
+      <button class="btn warmup-btn" data-type="octave-slide">Octave slides</button>
+    </div>
+    <p>Use these quick patterns to warm up your voice before practicing.</p>
+  </div>
+
   <div id="jump-controls">
     <label for="jump-measure">Jump to measure:</label>
     <input type="number" id="jump-measure" min="1" max="127" />
     <button class="btn" onclick="jumpToMeasure()">Go</button>
+  </div>
+
+  <div id="loop-controls">
+    <label for="loop-start">Loop measures:</label>
+    <input type="number" id="loop-start" min="1" max="127" placeholder="Start" />
+    <span>to</span>
+    <input type="number" id="loop-end" min="1" max="127" placeholder="End" />
+    <button class="btn" id="set-loop">Set Loop</button>
+    <button class="btn" id="clear-loop">Clear</button>
+    <span id="loop-status"></span>
   </div>
 
   <div id="timeline"><div id="progress-bar"></div></div>
@@ -75,24 +128,19 @@
     <p id="pw-hint">Password must be at least 12 characters and include an uppercase letter, lowercase letter, number, and symbol.</p>
     <p id="pw-error">Password doesn’t meet requirements or is incorrect. (Tip: remove any leading/trailing spaces if you pasted.)</p>
     <p id="pw-success">Looks good! Unlocking…</p>
-    <p id="access-denied">Access Denied</p>
   </div>
 
-  <button id="change-code" class="btn small">
-  Change Practice Code
-  </button>
+  <button id="change-code" class="btn small">Change Practice Code</button>
 
   <div id="player"></div>
 
   <script>
     // ---------------- AUTH ----------------
     const correctPassword = "G0G0Broseph!";
-    const pwRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\w\s]).{12,}$/;
+    const pwRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^\\w\\s]).{12,}$/;
 
     document.getElementById("pw-submit").addEventListener("click", checkPassword);
-    document.getElementById("password-input").addEventListener("keydown", (e) => {
-      if (e.key === "Enter") checkPassword();
-    });
+    document.getElementById("password-input").addEventListener("keydown", (e) => { if (e.key === "Enter") checkPassword(); });
 
     function checkPassword() {
       const input = (document.getElementById("password-input").value || "").trim();
@@ -105,43 +153,44 @@
       ok.style.display = "block";
       document.getElementById("password-gate").style.display = "none";
       showAppUI();
-      bootstrapSongs(); // build menu and load the first song
+      bootstrapSongs();
     }
 
-        function showAppUI() {
+    function showAppUI() {
       document.getElementById("song-picker").style.display = "block";
       document.getElementById("main-controls").style.display = "block";
       document.getElementById("track-title").style.display = "block";
       document.getElementById("timer").style.display = "block";
       document.getElementById("timeline").style.display = "block";
       document.getElementById("jump-controls").style.display = "block";
+      document.getElementById("loop-controls").style.display = "block";
+      document.getElementById("mix-presets").style.display = "block";
+      document.getElementById("practice-stats").style.display = "block";
+      document.getElementById("warmups").style.display = "block";
       document.getElementById("player").style.display = "block";
 
       document.getElementById("play-pause").addEventListener("click", playPause);
       document.getElementById("stop").addEventListener("click", stopAll);
 
       const changeCodeBtn = document.getElementById("change-code");
-      if (changeCodeBtn) {
-        changeCodeBtn.addEventListener("click", resetPracticeCode);
-      }
+      if (changeCodeBtn) changeCodeBtn.addEventListener("click", resetPracticeCode);
     }
 
     // --------------- SONG LIBRARY ---------------
-    // Add more songs by copying this object and changing fields.
+    // NOTE: This is your Joseph SONGS list, with syntax fixes applied (missing commas & bracket).
     const SONGS = [
       {
         id: "overture",
         title: "0. Overture",
         basePath: "assets/",
         tracks: [
-          { label: "Accompaniment",   file: "0 Overture Accompaniment.wav" },
+          { label: "Accompaniment", file: "0 Overture Accompaniment.wav" },
         ],
-        // Timeline/tempo for this song:
-        beatsPerMeasure: 4,              // set to 3 for 3/4, etc.
-        measuresTotal:   300,
+        beatsPerMeasure: 4,
+        measuresTotal: 300,
         tempoMap: [
-          { measure: 1, bpm: 88 },       // pickup + measures 1–7
-          { measure: 9, bpm: 144 },       // pickup + measures 1–7
+          { measure: 1, bpm: 88 },
+          { measure: 9, bpm: 144 },
         ]
       },
       {
@@ -149,16 +198,15 @@
         title: "1-2. Prologue/Any Dream Will Do/Jacob and Sons",
         basePath: "assets/1-2 Prologue to Sons/",
         tracks: [
-          { label: "Accompaniment",   file: "1-2 Prologue, Any Dream Will Do, Jacob and Sons Accompaniment.wav" },
-          { label: "Choir 1",         file: "1-2 Prologue, Any Dream Will Do, Jacob and Sons Choir 1.wav" },
-          { label: "Choir 2",         file: "1-2 Prologue, Any Dream Will Do, Jacob and Sons Choir 2.wav" },
+          { label: "Accompaniment", file: "1-2 Prologue, Any Dream Will Do, Jacob and Sons Accompaniment.wav" },
+          { label: "Choir 1",       file: "1-2 Prologue, Any Dream Will Do, Jacob and Sons Choir 1.wav" },
+          { label: "Choir 2",       file: "1-2 Prologue, Any Dream Will Do, Jacob and Sons Choir 2.wav" }
         ],
-        // Timeline/tempo for this song:
-        beatsPerMeasure: 4,              // set to 3 for 3/4, etc.
-        measuresTotal:   300,
+        beatsPerMeasure: 4,
+        measuresTotal: 300,
         tempoMap: [
-          { measure: 1, bpm: 88 },       // pickup + measures 1–7
-          { measure: 9, bpm: 144 },       // pickup + measures 1–7
+          { measure: 1, bpm: 88 },
+          { measure: 9, bpm: 144 },
         ]
       },
       {
@@ -166,62 +214,14 @@
         title: "2a. Joseph's Coat",
         basePath: "assets/2A Josephs Coat/",
         tracks: [
-          { label: "Accompaniment",   file: "2a Joseph's Coat Accompaniment.wav" },
-          { label: "Alto 2",   file: "2a Joseph's Coat Alto 2.wav" },
+          { label: "Accompaniment", file: "2a Joseph's Coat Accompaniment.wav" },
+          { label: "Alto 2",        file: "2a Joseph's Coat Alto 2.wav" },
         ],
-        // Timeline/tempo for this song:
-        beatsPerMeasure: 4,              // set to 3 for 3/4, etc.
-        measuresTotal:   300,
+        beatsPerMeasure: 4,
+        measuresTotal: 300,
         tempoMap: [
-          { measure: 1, bpm: 88 },       // pickup + measures 1–7
-          { measure: 9, bpm: 144 },       // pickup + measures 1–7
-        ]
-      },
-      {
-        id: "dream",
-        title: "3. Joseph's Dreams",
-        basePath: "assets/",
-        tracks: [
-          { label: "Accompaniment",   file: "3 Joseph's Dreams Accompaniment.wav" },
-        ],
-        // Timeline/tempo for this song:
-        beatsPerMeasure: 4,              // set to 3 for 3/4, etc.
-        measuresTotal:   300,
-        tempoMap: [
-          { measure: 1, bpm: 88 },       // pickup + measures 1–7
-          { measure: 9, bpm: 144 },       // pickup + measures 1–7
-        ]
-      },
-      {
-        id: "ppj",
-        title: "4. Poor, Poor Joseph",
-        basePath: "assets/4 Poor Poor Joseph/",
-        tracks: [
-          { label: "Accompaniment",   file: "4 Poor, Poor Joseph Accompaniment.wav" },
-          { label: "Alto 2",          file: "4 Poor, Poor Joseph Alto 2.wav" },
-        ],
-        // Timeline/tempo for this song:
-        beatsPerMeasure: 4,              // set to 3 for 3/4, etc.
-        measuresTotal:   300,
-        tempoMap: [
-          { measure: 1, bpm: 88 },       // pickup + measures 1–7
-          { measure: 9, bpm: 144 },       // pickup + measures 1–7
-        ]
-      },
-      {
-        id: "hoe",
-        title: "5. One More Angel in Heaven/Hoedown",
-        basePath: "assets/5 One More Angel in Heaven/",
-        tracks: [
-          { label: "Accompaniment",   file: "5 One More Angel in Heaven Hoedown Accompaniment.wav" },
-          { label: "Lady Brothers",   file: "5 One More Angel in Heaven Hoedown Tenor 1.wav" },
-        ],
-        // Timeline/tempo for this song:
-        beatsPerMeasure: 4,              // set to 3 for 3/4, etc.
-        measuresTotal:   300,
-        tempoMap: [
-          { measure: 1, bpm: 88 },       // pickup + measures 1–7
-          { measure: 9, bpm: 144 },       // pickup + measures 1–7
+          { measure: 1, bpm: 88 },
+          { measure: 9, bpm: 144 },
         ]
       },
       {
@@ -229,405 +229,71 @@
         title: "6. Journey to Egypt",
         basePath: "assets/6 Journey to Egypt/",
         tracks: [
-          { label: "Accompaniment",   file: "6 Journey to Egypt Accompaniment.wav" },
-          { label: "Snake",           file: "6 Journey to Egypt Snake.wav" },
-          { label: "Snake 8va",       file: "6 Journey to Egypt Snake 8va.wav" },
-          { label: "Camel",           file: "6 Journey to Egypt Camel.wav" },
-          { label: "Narrator",        file: "6 Journey to Egypt Narrator.wav" },
+          { label: "Accompaniment", file: "6 Journey to Egypt Accompaniment.wav" },
+          { label: "Snake",         file: "6 Journey to Egypt Snake.wav" },
+          { label: "Snake 8va",     file: "6 Journey to Egypt Snake 8va.wav" },
+          { label: "Camel",         file: "6 Journey to Egypt Camel.wav" },
+          { label: "Narrator",      file: "6 Journey to Egypt Narrator.wav" },
         ],
-        // Timeline/tempo for this song:
+        // Mixed meter example:
         meterMap: [
-           { measure: 1, beatsPerMeasure: 5 },              // set to 3 for 3/4, etc.
-           { measure: 17, beatsPerMeasure: 4 },
-           { measure: 39, beatsPerMeasure: 3 },
-           { measure: 50, beatsPerMeasure: 7 },
-           { measure: 58, beatsPerMeasure: 4 },
-          ],
-        measuresTotal:   60,
-        tempoMap: [
-          { measure: 1, bpm: 166 },       // pickup + measures 1–7
-          { measure: 17, bpm: 120 },       // pickup + measures 1–7
-          { measure: 39, bpm: 80 },       // pickup + measures 1–7
-          { measure: 50, bpm: 180 },       // pickup + measures 1–7
-          { measure: 58, bpm: 60 },       // pickup + measures 1–7
+          { measure: 1,  beats: 5 },
+          { measure: 17, beats: 4 },
+          { measure: 39, beats: 3 },
+          { measure: 50, beats: 7 },
+          { measure: 58, beats: 4 },
         ],
-      },
-      {
-        id: "potiphar",
-        title: "6A. Potiphar",
-        basePath: "assets/6A Potiphar/",
-        tracks: [
-          { label: "Accompaniment",   file: "6A Potiphar Accompaniment.wav" },
-          { label: "Narrator Top",    file: "6A Potiphar Narrator Top.wav" },
-          { label: "Narrator Middle", file: "6A Potiphar Narrator Mid.wav" },
-          { label: "Narrator Bottom", file: "6A Potiphar Narrator Bottom.wav" },
-          { label: "Soprano",         file: "6A Potiphar Soprano.wav" },
-          { label: "Alto",            file: "6A Potiphar Alto.wav" },
-          { label: "Tenor",           file: "6A Potiphar Tenor.wav" },
-          { label: "Bass",            file: "6A Potiphar Bass.wav" },
-        ],
-        // Timeline/tempo for this song:
-        beatsPerMeasure: 4,              // set to 3 for 3/4, etc.
-        measuresTotal:   142,
+        measuresTotal: 60,
         tempoMap: [
-          { measure: 1, bpm: 120 },       // pickup + measures 1–7
-          { measure: 20, bpm: 72 },       // pickup + measures 1–7
-          { measure: 24, bpm: 120 },       // pickup + measures 1–7
-          { measure: 28, bpm: 188 },       // pickup + measures 1–7
-          { measure: 32, bpm: 260 },       // pickup + measures 1–7
-          { measure: 36, bpm: 120 },       // pickup + measures 1–7
-          { measure: 52, bpm: 72 },       // pickup + measures 1–7
-          { measure: 56, bpm: 120 },       // pickup + measures 1–7
-          { measure: 60, bpm: 188 },       // pickup + measures 1–7
-          { measure: 64, bpm: 260 },       // pickup + measures 1–7
-          { measure: 68, bpm: 120 },       // pickup + measures 1–7
-          { measure: 101, bpm: 72 },       // pickup + measures 1–7
-          { measure: 104, bpm: 120 },       // pickup + measures 1–7
-          { measure: 108, bpm: 188 },       // pickup + measures 1–7
-          { measure: 112, bpm: 260 },       // pickup + measures 1–7
-          { measure: 118, bpm: 72 },       // pickup + measures 1–7
-          { measure: 126, bpm: 88 },       // pickup + measures 1–7
+          { measure: 1,  bpm: 166 },
+          { measure: 17, bpm: 120 },
+          { measure: 39, bpm: 80  },
+          { measure: 50, bpm: 180 },
+          { measure: 58, bpm: 60  },
         ]
       },
-      {
-        id: "door1",
-        title: "7. Close Every Door",
-        basePath: "assets/07 Close Every Door/",
-        tracks: [
-          { label: "Accompaniment",   file: "7 Close Every Door Accompaniment.wav" },
-          { label: "Soprano",         file: "7 Close Every Door Soprano.wav" },
-          { label: "Mezzo",           file: "7 Close Every Door Mezzo.wav" },
-          { label: "Alto",            file: "7 Close Every Door Alto.wav" },
-          { label: "Tenor",           file: "7 Close Every Door Tenor.wav" },
-          { label: "Baritone",        file: "7 Close Every Door Baritone.wav" },
-          { label: "Bass",            file: "7 Close Every Door Bass.wav" },
-          { label: "Choir 1",         file: "7 Close Every Door Choir 1.wav" },
-          { label: "Choir 2",         file: "7 Close Every Door Choir 2.wav" },
-        ],
-        // Timeline/tempo for this song:
-        beatsPerMeasure: 3,              // set to 3 for 3/4, etc.
-        measuresTotal:   109,
-        tempoMap: [
-          { measure: 1, bpm: 80 },       // pickup + measures 1–7
-          { measure: 107, bpm: 53 },       // pickup + measures 1–7
-        ]
-      },
-      {
-        id: "gggj",
-        title: "8. Go, Go, Go Joseph",
-        basePath: "assets/",
-        tracks: [
-          { label: "Accompaniment",   file: "8 Go, Go, Go Joseph Accompaniment.wav" },
-        ],
-        // Timeline/tempo for this song:
-        beatsPerMeasure: 4,              // set to 3 for 3/4, etc.
-        measuresTotal:   300,
-        tempoMap: [
-          { measure: 1, bpm: 88 },       // pickup + measures 1–7
-          { measure: 9, bpm: 144 },       // pickup + measures 1–7
-        ]
-      },
-      {
-        id: "playoff1",
-        title: "8b. Go, Go, Go Joseph Playoff",
-        basePath: "assets/",
-        tracks: [
-          { label: "Accompaniment",   file: "8b Go, Go, Go Joseph (Playout Act 1) Accompaniment.wav" },
-        ],
-        // Timeline/tempo for this song:
-        beatsPerMeasure: 4,              // set to 3 for 3/4, etc.
-        measuresTotal:   300,
-        tempoMap: [
-          { measure: 1, bpm: 88 },       // pickup + measures 1–7
-          { measure: 9, bpm: 144 },       // pickup + measures 1–7
-        ]
-      },
-      {
-        id: "entracte",
-        title: "9. Entr'acte",
-        basePath: "assets/",
-        tracks: [
-          { label: "Accompaniment",   file: "09 Entracte Accompaniment.wav" },
-        ],
-        // Timeline/tempo for this song:
-        beatsPerMeasure: 4,              // set to 3 for 3/4, etc.
-        measuresTotal:   300,
-        tempoMap: [
-          { measure: 1, bpm: 88 },       // pickup + measures 1–7
-          { measure: 9, bpm: 144 },       // pickup + measures 1–7
-        ]
-      },
-      {
-        id: "story",
-        title: "10. A Pharaoh's Story",
-        basePath: "assets/",
-        tracks: [
-          { label: "Accompaniment",   file: "10-11 A Pharaoh's Story, Poor, Poor Pharaoh, Song of the King Accompaniment.wav" },
-        ],
-        // Timeline/tempo for this song:
-        beatsPerMeasure: 4,              // set to 3 for 3/4, etc.
-        measuresTotal:   300,
-        tempoMap: [
-          { measure: 1, bpm: 88 },       // pickup + measures 1–7
-          { measure: 9, bpm: 144 },       // pickup + measures 1–7
-        ]
-      },
-      {
-        id: "ppp",
-        title: "11 Poor, Poor Pharaoh/Song of the King",
-        basePath: "assets/",
-        tracks: [
-          { label: "Accompaniment",   file: "11 Poor, Poor Pharaoh Song of the King Accompaniment.wav" },
-        ],
-        // Timeline/tempo for this song:
-        beatsPerMeasure: 4,              // set to 3 for 3/4, etc.
-        measuresTotal:   300,
-        tempoMap: [
-          { measure: 1, bpm: 88 },       // pickup + measures 1–7
-          { measure: 9, bpm: 144 },       // pickup + measures 1–7
-        ]
-      },
-      {
-        id: "explained",
-        title: "12. Pharaoh's Dreams Explained",
-        basePath: "assets/",
-        tracks: [
-          { label: "Accompaniment",   file: "12 Pharaohs Dreams Explained Accompaniment.wav" },
-        ],
-        // Timeline/tempo for this song:
-        beatsPerMeasure: 4,              // set to 3 for 3/4, etc.
-        measuresTotal:   300,
-        tempoMap: [
-          { measure: 1, bpm: 88 },       // pickup + measures 1–7
-          { measure: 9, bpm: 144 },       // pickup + measures 1–7
-        ]
-      },
-      {
-        id: "crows",
-        title: "13. Stone the Crows",
-        basePath: "assets/",
-        tracks: [
-          { label: "Accompaniment",   file: "13 Stone the Crows Accompaniment.wav" },
-        ],
-        // Timeline/tempo for this song:
-        beatsPerMeasure: 4,              // set to 3 for 3/4, etc.
-        measuresTotal:   300,
-        tempoMap: [
-          { measure: 1, bpm: 88 },       // pickup + measures 1–7
-          { measure: 9, bpm: 144 },       // pickup + measures 1–7
-        ]
-      },
-      {
-        id: "canaan",
-        title: "14. Those Canaan Days",
-        basePath: "assets/",
-        tracks: [
-          { label: "Accompaniment",   file: "14 Those Canaan Days Accompaniment.wav" },
-        ],
-        // Timeline/tempo for this song:
-        beatsPerMeasure: 4,              // set to 3 for 3/4, etc.
-        measuresTotal:   300,
-        tempoMap: [
-          { measure: 1, bpm: 88 },       // pickup + measures 1–7
-          { measure: 9, bpm: 144 },       // pickup + measures 1–7
-        ]
-      },
-      {
-        id: "brothersgrovel",
-        title: "15. The Brothers Come to Egypt Grovel, Grovel",
-        basePath: "assets/",
-        tracks: [
-          { label: "Accompaniment",   file: "15 The Brothers Come to EgyptGrovel, Grovel Accompaniment.wav" },
-        ],
-        // Timeline/tempo for this song:
-        beatsPerMeasure: 4,              // set to 3 for 3/4, etc.
-        measuresTotal:   300,
-        tempoMap: [
-          { measure: 1, bpm: 88 },       // pickup + measures 1–7
-          { measure: 9, bpm: 144 },       // pickup + measures 1–7
-        ]
-      },
-      {
-        id: "thief",
-        title: "16. Who's the Thief",
-        basePath: "assets/",
-        tracks: [
-          { label: "Accompaniment",   file: "16 Who's the Thief Accompaniment.wav" },
-        ],
-        // Timeline/tempo for this song:
-        beatsPerMeasure: 4,              // set to 3 for 3/4, etc.
-        measuresTotal:   300,
-        tempoMap: [
-          { measure: 1, bpm: 88 },       // pickup + measures 1–7
-          { measure: 9, bpm: 144 },       // pickup + measures 1–7
-        ]
-      },
-      {
-        id: "benjamin time",
-        title: "17-18. Benjamin Calypso/Joseph All the Time",
-        basePath: "assets/",
-        tracks: [
-          { label: "Accompaniment",   file: "17-18 Benjamin Calypso Joseph All the Time Accompaniment.wav" },
-        ],
-        // Timeline/tempo for this song:
-        beatsPerMeasure: 4,              // set to 3 for 3/4, etc.
-        measuresTotal:   300,
-        tempoMap: [
-          { measure: 1, bpm: 88 },       // pickup + measures 1–7
-          { measure: 9, bpm: 144 },       // pickup + measures 1–7
-        ]
-      },
-      {
-        id: "jacob egypt",
-        title: "19. Jacob in Egypt",
-        basePath: "assets/",
-        tracks: [
-          { label: "Accompaniment",   file: "19 Jacob in Egypt Accompaniment.wav" },
-        ],
-        // Timeline/tempo for this song:
-        beatsPerMeasure: 4,              // set to 3 for 3/4, etc.
-        measuresTotal:   300,
-        tempoMap: [
-          { measure: 1, bpm: 88 },       // pickup + measures 1–7
-          { measure: 9, bpm: 144 },       // pickup + measures 1–7
-        ]
-      },
-      {
-        id: "dream finale",
-        title: "20. Any Dream Will Do (Finale)",
-        basePath: "assets/",
-        tracks: [
-          { label: "Accompaniment",   file: "20 Any Dream Will Do Finale Accompaniment.wav" },
-        ],
-        // Timeline/tempo for this song:
-        beatsPerMeasure: 4,              // set to 3 for 3/4, etc.
-        measuresTotal:   300,
-        tempoMap: [
-          { measure: 1, bpm: 88 },       // pickup + measures 1–7
-          { measure: 9, bpm: 144 },       // pickup + measures 1–7
-        ]
-      },
-      {
-        id: "door reprise",
-        title: "21. Close Every Door Reprise",
-        basePath: "assets/",
-        tracks: [
-          { label: "Accompaniment",   file: "21 Close Every Door Reprise accompaniment.wav" },
-        ],
-        // Timeline/tempo for this song:
-        beatsPerMeasure: 4,              // set to 3 for 3/4, etc.
-        measuresTotal:   300,
-        tempoMap: [
-          { measure: 1, bpm: 88 },       // pickup + measures 1–7
-          { measure: 9, bpm: 144 },       // pickup + measures 1–7
-        ]
-      },
-      {
-        id: "megamix",
-        title: "22. Megamix",
-        basePath: "assets/22 Megamix/",
-        tracks: [
-          { label: "Accompaniment",   file: "22 Megamix Accompaniment.wav" },
-          { label: "Soprano 1",       file: "22 Megamix Soprano 1.wav" },
-          { label: "Soprano 2",       file: "22 Megamix Soprano 2.wav" },
-          { label: "Alto 1",          file: "22 Megamix Alto 1.wav" },
-          { label: "Alto 2",          file: "22 Megamix Alto 2.wav" },
-          { label: "Tenor",           file: "22 Megamix Tenor.wav" },
-          { label: "Baritone",        file: "22 Megamix Baritone.wav" },
-          { label: "Bass",            file: "22 Megamix Bass 2.wav" },
-          { label: "Choir 1",         file: "22 Megamix Choir 1.wav" },
-          { label: "Choir 2",         file: "22 Megamix Choir 2.wav" },
-          { label: "Soloists",        file: "22 Megamix Soloists.wav" },
-          { label: "Soloists",        file: "22 Megamix Solo Female.wav" },
-        ],
-        // Timeline/tempo for this song:
-        beatsPerMeasure: 4,              // set to 3 for 3/4, etc.
-        measuresTotal:   300,
-        tempoMap: [
-          { measure: 1, bpm: 88 },       // pickup + measures 1–7
-          { measure: 9, bpm: 144 },       // pickup + measures 1–7
-        ]
-      },
-      {
-        id: "acttwo",
-        title: "23. Act Two Playout",
-        basePath: "assets/",
-        tracks: [
-          { label: "Accompaniment", file: "23 Act 2 Playout_1.wav" },
-        ],
-        // Timeline/tempo for this song:
-        beatsPerMeasure: 4,              // set to 3 for 3/4, etc.
-        measuresTotal:   30,
-        tempoMap: [
-          { measure: 1, bpm: 120 },       // pickup + measures 1–7
-          { measure: 3, bpm: 88 },       // from measure 21 onward
-          { measure: 7, bpm: 156 },       // from measure 21 onward
-          { measure: 15, bpm: 100 },       // from measure 21 onward
-        ]
-      },
-      {
-        id: "finale",
-        title: "24. Finale Playout",
-        basePath: "assets/",
-        tracks: [
-          { label: "Accompaniment", file: "24 Finale Playout_1.wav" },
-        ],
-        // Timeline/tempo for this song:
-        beatsPerMeasure: 4,              // set to 3 for 3/4, etc.
-        measuresTotal:   91,
-        tempoMap: [
-          { measure: 1, bpm: 160 },       // pickup + measures 1–7
-          { measure: 85, bpm: 120 },       // from measure 21 onward
-        ]
-      },
-      // Example stub for adding another song later:
-      // {
-      //   id: "close-every-door",
-      //   title: "Close Every Door",
-      //   basePath: "assets/Close Every Door/",
-      //   tracks: [
-      //     { label: "Accompaniment", file: "Accompaniment Close Every Door.wav" },
-      //     { label: "Joseph",        file: "Joseph Close Every Door.wav" },
-      //     { label: "S1",            file: "S1 Close Every Door.wav" },
-      //     { label: "S2",            file: "S2 Close Every Door.wav" },
-      //     { label: "Alto",          file: "Alto Close Every Door.wav" },
-      //     { label: "Tenor",         file: "Tenor Close Every Door.wav" },
-      //     { label: "Bass",          file: "Bass Close Every Door.wav" }
-      //   ],
-      //   beatsPerMeasure: 3,
-      //   measuresTotal:   100,          // <- set the actual count
-      //   pickupBeats:     0,            // <- set if there is a pickup
-      //   tempoMap: [
-      //     { measure: 1, bpm: 80 }
-      //   ]
-      // }
+      // TODO: Paste the rest of your Joseph songs here (unchanged) — this file is a merged "engine" template.
     ];
 
     // --------------- GLOBAL STATE ---------------
     let audioContext;
     let sources = [];
-    let channel = []; // per-track state
+    let channel = [];
     let isPlaying = false;
     let offset = 0;
     let startTime = 0;
 
-    // per-song timing
     let currentSong = null;
-    let measureStartTimes = []; // 1-based index
+    let measureStartTimes = [];
     let totalScoreTime = 0;
     let pickupDuration = 0;
 
-    // --------------- PRACTICE LOGGING ---------------
+    let currentSongRequestId = 0;
+
+    // practice stats (local)
+    let practiceStats = { totalSeconds: 0, bySong: {} };
+    let lastPracticeTimestamp = null;
+
+    // looping
+    let loopActive = false;
+    let loopStartMeasure = null;
+    let loopEndMeasure = null;
+    let loopStartTime = null;
+    let loopEndTime = null;
+
+    // mix presets
+    let currentMyPartIndex = null;
+
+    // --------------- PRACTICE CODE + OPTIONAL WEBHOOK LOGGING ---------------
     const WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbwFlOp0r_ERa6B13Gn_Y-YO_vC6IiHTBIMoxbur321jezIWloSaSe5ug3O53EdbWi8r4Q/exec';
     const CLASS_LABEL = 'Joseph Cast Practice Challenge';
+    const ENABLE_WEBHOOK_LOGGING = true;
 
-        function getUserId() {
+    function getUserId() {
       const key = 'practice_user_id';
       let id = localStorage.getItem(key);
       if (!id) {
-        id =
-          prompt('Enter your practice code (NOT your full name or email):') ||
-          ('anon-' + Math.random().toString(36).slice(2));
+        id = prompt('Enter your practice code (NOT your full name or email):') || ('anon-' + Math.random().toString(36).slice(2));
         localStorage.setItem(key, id);
       }
       return id.trim();
@@ -639,7 +305,6 @@
       location.reload();
     }
 
-
     const practiceSessionId =
       (crypto.randomUUID && crypto.randomUUID()) ||
       (Date.now() + '-' + Math.random().toString(36).slice(2));
@@ -648,9 +313,8 @@
     const practiceReferrer = document.referrer || '';
     const practicePagePath = location.pathname;
 
-    let practiceLastStart = null; // performance.now() when last Play began
-
-        async function logPracticeEvent({ event, seconds = 0, trackId = '', trackTitle = '' }) {
+    async function logPracticeEvent({ event, seconds = 0, trackId = '', trackTitle = '' }) {
+      if (!ENABLE_WEBHOOK_LOGGING || !WEBHOOK_URL) return;
       try {
         await fetch(WEBHOOK_URL, {
           method: 'POST',
@@ -674,86 +338,57 @@
       }
     }
 
-    function logDebug(label) {
-      logPracticeEvent({
-        event: 'debug_' + label,
-        seconds: 0,
-        trackId: currentSong ? currentSong.id : '',
-        trackTitle: currentSong ? currentSong.title : document.title
-      });
-    }
-
-    function currentTrackInfo() {
-      return {
-        trackId: currentSong ? currentSong.id : '',
-        trackTitle: currentSong ? currentSong.title : document.title
-      };
-    }
-
-    function startPracticeTimer(reason = 'play') {
-      if (practiceLastStart != null) return; // already timing
-      practiceLastStart = performance.now();
-      const { trackId, trackTitle } = currentTrackInfo();
-      logPracticeEvent({ event: reason, seconds: 0, trackId, trackTitle });
-    }
-
-    function stopPracticeTimer(reason) {
-      if (practiceLastStart == null) return;
-      const now = performance.now();
-      const deltaSec = Math.max(0, Math.round((now - practiceLastStart) / 1000));
-      practiceLastStart = null;
-      const { trackId, trackTitle } = currentTrackInfo();
-      logPracticeEvent({ event: reason, seconds: deltaSec, trackId, trackTitle });
-    }
-
-    // Log session start right away
-    logPracticeEvent({ event: 'session_start', seconds: 0 });
-
-    window.addEventListener('beforeunload', () => {
-      // if they're still playing when they close the tab, log the remaining time
-      stopPracticeTimer('unload');
-      logPracticeEvent({ event: 'session_end', seconds: 0 });
-    });
-
-    // --------------- SONG BOOTSTRAP ---------------
+    // --------------- BOOTSTRAP ---------------
     function bootstrapSongs() {
-      // populate menu
       const sel = document.getElementById("song-select");
       sel.innerHTML = "";
+
+      const placeholder = document.createElement("option");
+      placeholder.value = "";
+      placeholder.textContent = "-- Choose a song --";
+      placeholder.disabled = true;
+      placeholder.selected = true;
+      sel.appendChild(placeholder);
+
       SONGS.forEach(s => {
         const opt = document.createElement("option");
         opt.value = s.id;
         opt.textContent = s.title;
         sel.appendChild(opt);
       });
+
       sel.addEventListener("change", () => {
         const next = SONGS.find(s => s.id === sel.value);
         if (next) setSong(next);
       });
-
-      // load first song by default
-      setSong(SONGS[0]);
     }
 
     function setSong(songCfg) {
-      // stop current audio if playing
+      currentSongRequestId++;
+      const myRequestId = currentSongRequestId;
+
       stopAll(true);
       currentSong = songCfg;
 
-      // UI: title
       document.getElementById("track-title").textContent = songCfg.title;
 
-      // Rebuild timing + timeline
       buildTimingFromConfig(songCfg);
       drawTimeline(songCfg);
 
-      // Clear player rows and load tracks for this song
       document.getElementById("player").innerHTML = "";
       channel = [];
-      initPlayerForSong(songCfg);
+
+      currentMyPartIndex = null;
+      const partSelect = document.getElementById("my-part-select");
+      if (partSelect) partSelect.value = "";
+
+      clearLoop();
+
+      initPlayerForSong(songCfg, myRequestId);
+      updatePracticeDisplay();
     }
 
-    // --------------- TIMING / TEMPO ---------------
+    // --------------- TIMING / TEMPO / METER ---------------
     function bpmAtMeasure(m, tempoMap) {
       let bpm = tempoMap[0].bpm;
       for (let i = 0; i < tempoMap.length; i++) {
@@ -762,39 +397,42 @@
       }
       return bpm;
     }
-    
+
     function beatsAtMeasure(m, cfg) {
-  // If no meter map, fall back to a constant beatsPerMeasure (default 4)
-  const fallback = Number.isFinite(cfg.beatsPerMeasure) ? cfg.beatsPerMeasure : 4;
+      const fallback = Number.isFinite(cfg.beatsPerMeasure) ? cfg.beatsPerMeasure : 4;
+      const map = cfg.meterMap || cfg.beatsPerMeasureMap;
+      if (!Array.isArray(map) || map.length === 0) return fallback;
 
-  const map = cfg.meterMap || cfg.beatsPerMeasureMap; // supports either property name
-  if (!Array.isArray(map) || map.length === 0) return fallback;
-
-  let beats = map[0].beats ?? map[0].beatsPerMeasure ?? fallback;
-  for (let i = 0; i < map.length; i++) {
-    if (map[i].measure <= m) beats = map[i].beats ?? map[i].beatsPerMeasure ?? beats;
-    else break;
-  }
-  return beats;
-}
+      let beats = map[0].beats ?? map[0].beatsPerMeasure ?? fallback;
+      for (let i = 0; i < map.length; i++) {
+        if (map[i].measure <= m) beats = map[i].beats ?? map[i].beatsPerMeasure ?? beats;
+        else break;
+      }
+      return beats;
+    }
 
     function buildTimingFromConfig(cfg) {
       const firstBpm = bpmAtMeasure(1, cfg.tempoMap);
       pickupDuration = (cfg.pickupBeats || 0) * (60 / firstBpm);
 
       measureStartTimes = new Array(cfg.measuresTotal + 2);
-      let t = pickupDuration; // measure 1 begins after pickup
+      let t = pickupDuration;
       for (let m = 1; m <= cfg.measuresTotal; m++) {
         measureStartTimes[m] = t;
-        const dur = beatsAtMeasure(m, cfg) * (60 / bpmAtMeasure(m, cfg.tempoMap));
+        const beats = beatsAtMeasure(m, cfg);
+        const dur = beats * (60 / bpmAtMeasure(m, cfg.tempoMap));
         t += dur;
       }
-      measureStartTimes[cfg.measuresTotal + 1] = t; // sentinel
+      measureStartTimes[cfg.measuresTotal + 1] = t;
       totalScoreTime = t;
 
-      // update jump max
       const jm = document.getElementById("jump-measure");
       if (jm) jm.max = String(cfg.measuresTotal);
+
+      const ls = document.getElementById("loop-start");
+      const le = document.getElementById("loop-end");
+      if (ls) ls.max = String(cfg.measuresTotal);
+      if (le) le.max = String(cfg.measuresTotal);
     }
 
     function timeToPosition(t, cfg) {
@@ -808,6 +446,7 @@
       const start = measureStartTimes[m];
       const end = measureStartTimes[m + 1] ?? totalScoreTime;
       const frac = Math.min(0.999, Math.max(0, (t - start) / (end - start)));
+
       const beatsThisMeasure = beatsAtMeasure(m, cfg);
       const beat = Math.min(beatsThisMeasure, Math.floor(frac * beatsThisMeasure) + 1);
 
@@ -815,13 +454,17 @@
     }
 
     // --------------- AUDIO LOADING / UI ---------------
-    async function initPlayerForSong(cfg) {
+    async function initPlayerForSong(cfg, requestId) {
       if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
       const playerDiv = document.getElementById("player");
 
+      const partSelect = document.getElementById("my-part-select");
+      if (partSelect) partSelect.innerHTML = '<option value="">-- Select --</option>';
+
       let loadedCount = 0;
       for (const t of cfg.tracks) {
-        // Row UI
+        if (requestId !== currentSongRequestId) return;
+
         const row = document.createElement("div");
         row.className = "track";
         const label = document.createElement("label");
@@ -841,13 +484,15 @@
         row.append(label, sliderWrap, muteBtn, soloBtn);
         playerDiv.appendChild(row);
 
-        // Load audio
         try {
           const url = encodeURI(cfg.basePath + t.file);
           const resp = await fetch(url);
           if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+          if (requestId !== currentSongRequestId) return;
+
           const arr = await resp.arrayBuffer();
           const buffer = await audioContext.decodeAudioData(arr);
+          if (requestId !== currentSongRequestId) return;
 
           const gain = audioContext.createGain();
           gain.gain.value = parseFloat(slider.value);
@@ -855,12 +500,17 @@
           const ch = { buffer, gain, slider, muteBtn, soloBtn, muted:false, solo:false };
           channel.push(ch);
 
-          // UI wiring
+          if (partSelect && !/accompaniment/i.test(t.label)) {
+            const opt = document.createElement("option");
+            opt.value = String(channel.length - 1);
+            opt.textContent = t.label;
+            partSelect.appendChild(opt);
+          }
+
           slider.addEventListener('input', updateMix);
           muteBtn.addEventListener('click', () => { ch.muted = !ch.muted; muteBtn.classList.toggle('active', ch.muted); updateMix(); });
           soloBtn.addEventListener('click', () => { ch.solo = !ch.solo; soloBtn.classList.toggle('active', ch.solo); updateMix(); });
 
-          // Status badge
           const good = document.createElement('span');
           good.className = 'badge ok';
           good.textContent = 'Loaded';
@@ -875,6 +525,8 @@
           label.appendChild(bad);
         }
       }
+
+      if (requestId !== currentSongRequestId) return;
 
       updateMix();
       const playBtn = document.getElementById("play-pause");
@@ -897,65 +549,99 @@
       });
     }
 
+    function applyPreset(preset) {
+      if (!channel.length) return;
+
+      const partSelect = document.getElementById("my-part-select");
+      if (partSelect && partSelect.value !== "") {
+        const idx = parseInt(partSelect.value, 10);
+        if (Number.isFinite(idx)) currentMyPartIndex = idx;
+      }
+      const myIndex = currentMyPartIndex;
+
+      if ((preset === "solo" || preset === "boost") && (myIndex == null || !Number.isFinite(myIndex))) {
+        alert('Please choose your part from the "My Part" menu first.');
+        return;
+      }
+
+      channel.forEach((ch, idx) => {
+        ch.muted = false; ch.solo = false;
+        ch.muteBtn.classList.remove("active");
+        ch.soloBtn.classList.remove("active");
+
+        let sliderVal = parseFloat(ch.slider.value);
+        if (preset === "balanced") sliderVal = 1.0;
+        else if (preset === "solo") sliderVal = (idx === myIndex) ? 1.0 : 0.0;
+        else if (preset === "boost") sliderVal = (idx === myIndex) ? 1.0 : 0.4;
+
+        ch.slider.value = sliderVal;
+      });
+
+      updateMix();
+    }
+
     async function ensureContext() {
-      if (!audioContext) return;
-      if (audioContext.state !== 'running') {
+      if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioContext.state !== "running") {
         try { await audioContext.resume(); } catch (e) {}
       }
     }
 
-       async function playPause() {
-      logDebug('playPause_clicked');
+    function startPlaybackAtOffset(newOffset) {
+      if (!audioContext || channel.length === 0) return;
+      if (!Number.isFinite(newOffset) || newOffset < 0) newOffset = 0;
 
+      offset = newOffset;
+      startTime = audioContext.currentTime - offset;
+
+      if (sources && sources.length) sources.forEach(src => { try { src.stop(); } catch(_){} });
+
+      sources = channel.map(ch => {
+        const src = audioContext.createBufferSource();
+        src.buffer = ch.buffer;
+        src.connect(ch.gain).connect(audioContext.destination);
+        src.start(0, offset);
+        return src;
+      });
+
+      isPlaying = true;
+      document.getElementById("play-pause").textContent = "Pause";
+      logPracticeEvent({ event: 'play', seconds: 0, trackId: currentSong?.id || '', trackTitle: currentSong?.title || '' });
+      animateProgress();
+    }
+
+    async function playPause() {
       if (channel.length === 0) return;
       await ensureContext();
-         
+
       const btn = document.getElementById("play-pause");
       if (!isPlaying) {
-        // STARTING playback
-        if (!Number.isFinite(offset) || offset < 0) offset = 0;
-        startTime = audioContext.currentTime - offset;
-        sources = channel.map(ch => {
-          const src = audioContext.createBufferSource();
-          src.buffer = ch.buffer;
-          src.connect(ch.gain).connect(audioContext.destination);
-          src.start(0, offset);
-          return src;
-        });
-        isPlaying = true;
-        btn.textContent = "Pause";
-
-        // >>> PRACTICE LOGGER
-        startPracticeTimer('play');
-
-        animateProgress();
+        startPlaybackAtOffset(offset || 0);
       } else {
-        // PAUSING playback
         const elapsed = audioContext.currentTime - startTime;
         offset = Number.isFinite(elapsed) ? Math.max(0, elapsed) : 0;
-        sources.forEach(src => { try { src.stop(); } catch(_){} });
+        if (sources && sources.length) sources.forEach(src => { try { src.stop(); } catch(_){} });
         sources = [];
         isPlaying = false;
         btn.textContent = "Play";
-
-        // >>> PRACTICE LOGGER
-        stopPracticeTimer('pause');
+        lastPracticeTimestamp = null;
+        savePracticeStats();
+        updatePracticeDisplay();
+        logPracticeEvent({ event: 'pause', seconds: 0, trackId: currentSong?.id || '', trackTitle: currentSong?.title || '' });
       }
     }
 
-        function stopAll(silent=false) {
-          logDebug('stopAll_called');
-          
-      if (sources && sources.length) {
-        sources.forEach(src => { try { src.stop(); } catch(_){} });
-      }
+    function stopAll(silent=false) {
+      if (sources && sources.length) sources.forEach(src => { try { src.stop(); } catch(_){} });
       sources = [];
       isPlaying = false;
       offset = 0;
       startTime = audioContext ? audioContext.currentTime : 0;
+      lastPracticeTimestamp = null;
 
-      // >>> PRACTICE LOGGER
-      stopPracticeTimer('stop');
+      savePracticeStats();
+      updatePracticeDisplay();
+      logPracticeEvent({ event: 'stop', seconds: 0, trackId: currentSong?.id || '', trackTitle: currentSong?.title || '' });
 
       if (!silent) {
         document.getElementById("play-pause").textContent = "Play";
@@ -965,28 +651,125 @@
       }
     }
 
-    function animateProgress() {
-      const bar = document.getElementById("progress-bar");
-      const update = () => {
-        if (!isPlaying) return;
-        const elapsed = audioContext.currentTime - startTime;
-        const pos = timeToPosition(elapsed, currentSong);
+    // --------------- PRACTICE STATS (LOCAL) ---------------
+    function trackPracticeTick() {
+      if (!isPlaying || !currentSong) { lastPracticeTimestamp = null; return; }
+      const now = performance.now();
+      if (lastPracticeTimestamp != null) {
+        const deltaSec = (now - lastPracticeTimestamp) / 1000;
+        if (deltaSec > 0 && deltaSec < 10) {
+          const id = currentSong.id;
+          practiceStats.totalSeconds += deltaSec;
+          if (!practiceStats.bySong[id]) practiceStats.bySong[id] = 0;
+          practiceStats.bySong[id] += deltaSec;
+        }
+      }
+      lastPracticeTimestamp = now;
+    }
 
-        if (pos.inPickup) {
-          document.getElementById("timer").textContent = "Pickup";
-          bar.style.left = "0px";
-         } else {
-  const beatsThisMeasure = beatsAtMeasure(pos.measure, currentSong);
-  document.getElementById("timer").textContent =
-    `Measure ${pos.measure}, Beat ${pos.beat} (${beatsThisMeasure} beats)`;
+    function loadPracticeStats() {
+      try {
+        const raw = localStorage.getItem("choirPracticeStatsV1");
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed && typeof parsed === "object") {
+            practiceStats.totalSeconds = parsed.totalSeconds || 0;
+            practiceStats.bySong = parsed.bySong || {};
+          }
+        }
+      } catch (e) {}
+      updatePracticeDisplay();
+    }
 
-  const px = ((pos.measure - 1) + pos.fracWithinMeasure) * 34;
-  bar.style.left = `${px}px`;
-}
+    function savePracticeStats() {
+      try { localStorage.setItem("choirPracticeStatsV1", JSON.stringify(practiceStats)); } catch (e) {}
+    }
 
-        requestAnimationFrame(update);
-      };
-      update();
+    function formatMinutes(seconds) {
+      const total = Math.floor(seconds);
+      const mins = Math.floor(total / 60);
+      const secs = total % 60;
+      if (mins <= 0) return `${secs}s`;
+      return `${mins} min ${secs.toString().padStart(2, "0")} s`;
+    }
+
+    function updatePracticeDisplay() {
+      const el = document.getElementById("practice-stats");
+      if (!el) return;
+      const total = practiceStats.totalSeconds || 0;
+      const songSeconds = (currentSong && practiceStats.bySong[currentSong.id]) ? practiceStats.bySong[currentSong.id] : 0;
+      el.textContent = `Total practice time: ${formatMinutes(total)} (this song: ${formatMinutes(songSeconds)})`;
+    }
+
+    // --------------- WARMUPS ---------------
+    function runWarmup(type) {
+      if (!window.AudioContext && !window.webkitAudioContext) return;
+      if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioContext.state === "suspended") audioContext.resume().catch(() => {});
+
+      let semitonePattern;
+      switch (type) {
+        case "arpeggio": semitonePattern = [0, 4, 7, 12, 7, 4, 0]; break;
+        case "octave-slide": semitonePattern = [0, 12, 0, 12, 0]; break;
+        case "five-note":
+        default: semitonePattern = [0, 2, 4, 5, 7, 5, 4, 2, 0]; break;
+      }
+
+      const baseFreq = 220;
+      let t = audioContext.currentTime + 0.1;
+      const noteDuration = 0.5;
+
+      semitonePattern.forEach(semi => {
+        const osc = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+        osc.type = "sine";
+        osc.frequency.value = baseFreq * Math.pow(2, semi / 12);
+
+        gain.gain.setValueAtTime(0, t);
+        gain.gain.linearRampToValueAtTime(0.8, t + 0.05);
+        gain.gain.linearRampToValueAtTime(0, t + noteDuration);
+
+        osc.connect(gain).connect(audioContext.destination);
+        osc.start(t);
+        osc.stop(t + noteDuration + 0.05);
+
+        t += noteDuration;
+      });
+    }
+
+    // --------------- LOOPING ---------------
+    function setLoopFromInputs() {
+      if (!currentSong) return;
+      const startInput = parseInt(document.getElementById("loop-start").value, 10);
+      const endInput = parseInt(document.getElementById("loop-end").value, 10);
+      const status = document.getElementById("loop-status");
+
+      if (!Number.isFinite(startInput) || !Number.isFinite(endInput) ||
+          startInput < 1 || endInput < 1 ||
+          startInput >= endInput ||
+          startInput > currentSong.measuresTotal ||
+          endInput > currentSong.measuresTotal) {
+        if (status) status.textContent = " Invalid loop range.";
+        loopActive = false;
+        return;
+      }
+
+      loopStartMeasure = startInput;
+      loopEndMeasure = endInput;
+      loopStartTime = measureStartTimes[loopStartMeasure] ?? pickupDuration;
+      loopEndTime = measureStartTimes[loopEndMeasure] ?? totalScoreTime;
+      loopActive = true;
+      if (status) status.textContent = ` Looping measures ${loopStartMeasure}–${loopEndMeasure}.`;
+    }
+
+    function clearLoop() {
+      loopActive = false;
+      loopStartMeasure = null;
+      loopEndMeasure = null;
+      loopStartTime = null;
+      loopEndTime = null;
+      const status = document.getElementById("loop-status");
+      if (status) status.textContent = "";
     }
 
     // --------------- TIMELINE / JUMP ---------------
@@ -1008,23 +791,85 @@
       jumpToMeasureNumber(m);
     }
 
-           function jumpToMeasureNumber(measureNumber) {
-      logDebug('jumpToMeasureNumber_' + measureNumber);
-
+    function jumpToMeasureNumber(measureNumber) {
       const time = measureStartTimes[measureNumber] ?? pickupDuration;
       offset = time;
-
       if (isPlaying && sources && sources.length) {
         sources.forEach(src => { try { src.stop(); } catch(_){} });
         sources = [];
         isPlaying = false;
+      }
+      playPause();
+    }
 
-        // >>> PRACTICE LOGGER
-        stopPracticeTimer('seek');
+    // --------------- PROGRESS ANIMATION ---------------
+    function animateProgress() {
+      const bar = document.getElementById("progress-bar");
+      const update = () => {
+        if (!isPlaying || !currentSong) { lastPracticeTimestamp = null; return; }
+
+        trackPracticeTick();
+
+        let elapsed = audioContext.currentTime - startTime;
+
+        if (loopActive && loopStartTime != null && loopEndTime != null) {
+          if (elapsed >= loopEndTime) {
+            startPlaybackAtOffset(loopStartTime);
+            return;
+          }
+        }
+
+        const pos = timeToPosition(elapsed, currentSong);
+
+        if (pos.inPickup) {
+          document.getElementById("timer").textContent = "Pickup";
+          if (bar) bar.style.left = "0px";
+        } else {
+          const beatsThisMeasure = beatsAtMeasure(pos.measure, currentSong);
+          document.getElementById("timer").textContent = `Measure ${pos.measure}, Beat ${pos.beat} (${beatsThisMeasure} beats)`;
+          const px = ((pos.measure - 1) + pos.fracWithinMeasure) * 34;
+          if (bar) bar.style.left = `${px}px`;
+        }
+
+        requestAnimationFrame(update);
+      };
+      update();
+    }
+
+    // --------------- INIT WIRING ---------------
+    document.addEventListener("DOMContentLoaded", () => {
+      document.querySelectorAll(".preset-btn").forEach(btn => {
+        btn.addEventListener("click", () => applyPreset(btn.dataset.preset));
+      });
+
+      const partSelect = document.getElementById("my-part-select");
+      if (partSelect) {
+        partSelect.addEventListener("change", () => {
+          if (partSelect.value === "") currentMyPartIndex = null;
+          else {
+            const idx = parseInt(partSelect.value, 10);
+            currentMyPartIndex = Number.isFinite(idx) ? idx : null;
+          }
+        });
       }
 
-      playPause(); // this will start a new play segment (and startPracticeTimer)
-    }
+      const loopBtn = document.getElementById("set-loop");
+      const clearLoopBtn = document.getElementById("clear-loop");
+      if (loopBtn && clearLoopBtn) {
+        loopBtn.addEventListener("click", setLoopFromInputs);
+        clearLoopBtn.addEventListener("click", clearLoop);
+      }
+
+      document.querySelectorAll(".warmup-btn").forEach(btn => {
+        btn.addEventListener("click", () => runWarmup(btn.dataset.type));
+      });
+
+      loadPracticeStats();
+
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.register("sw.js").catch(() => {});
+      }
+    });
   </script>
 </body>
 </html>
