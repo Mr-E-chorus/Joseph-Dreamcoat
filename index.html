@@ -191,16 +191,29 @@
       {
         id: "overture",
         title: "0. Overture",
-        basePath: "assets/",
+        basePath: "assets/0 Overture/",
         tracks: [
           { label: "Accompaniment",   file: "0 Overture Accompaniment.wav" },
+          { label: "Soprano",         file: "0 Overture Soprano.wav" },
+          { label: "Alto",            file: "0 Overture Alto.wav" },
+          { label: "Tenor",           file: "0 Overture Tenor.wav" },
+          { label: "Bass",            file: "0 Overture Bass.wav" },
         ],
         // Timeline/tempo for this song:
-        beatsPerMeasure: 4,              // set to 3 for 3/4, etc.
-        measuresTotal:   300,
+        meterMap: [
+           { measure: 1,  beatsPerMeasure: 4 },              // set to 3 for 3/4, etc.
+           { measure: 88, beatsPerMeasure: 6 },
+           { measure: 89, beatsPerMeasure: 3 },
+           { measure: 112, beatsPerMeasure: 6 },
+          ],
+        measuresTotal:   141,
         tempoMap: [
-          { measure: 1, bpm: 88 },       // pickup + measures 1–7
-          { measure: 9, bpm: 144 },       // pickup + measures 1–7
+          { measure: 1,   bpm: 138 },       // pickup + measures 1–7
+          { measure: 35,  bpm: 120 },       // pickup + measures 1–7
+          { measure: 77,  bpm: 124 },       // pickup + measures 1–7
+          { measure: 81,  bpm: 128 },       // pickup + measures 1–7
+          { measure: 85,  bpm: 132 },       // pickup + measures 1–7
+          { measure: 112, bpm: 360 },       // pickup + measures 1–7
         ]
       },
       {
@@ -214,10 +227,13 @@
         ],
         // Timeline/tempo for this song:
         beatsPerMeasure: 4,              // set to 3 for 3/4, etc.
-        measuresTotal:   300,
+        measuresTotal:   164,
         tempoMap: [
-          { measure: 1, bpm: 88 },       // pickup + measures 1–7
-          { measure: 9, bpm: 144 },       // pickup + measures 1–7
+          { measure: 1,   bpm: 56 },       // pickup + measures 1–7
+          { measure: 16,  bpm: 60 },       // pickup + measures 1–7
+          { measure: 24,  bpm: 120 },       // pickup + measures 1–7
+          { measure: 98,  bpm: 100 },       // pickup + measures 1–7
+          { measure: 105, bpm: 144 },       // pickup + measures 1–7
         ]
       },
       {
@@ -229,11 +245,15 @@
           { label: "Alto 2",   file: "2a Joseph's Coat Alto 2.wav" },
         ],
         // Timeline/tempo for this song:
-        beatsPerMeasure: 4,              // set to 3 for 3/4, etc.
-        measuresTotal:   300,
+        meterMap: [
+           { measure: 1,   beatsPerMeasure: 4 },              // set to 3 for 3/4, etc.
+           { measure: 38,  beatsPerMeasure: 2 },
+           { measure: 39,  beatsPerMeasure: 4 },
+           { measure: 75,  beatsPerMeasure: 2 },
+           { measure: 76,  beatsPerMeasure: 4 },
+        measuresTotal:   129,
         tempoMap: [
-          { measure: 1, bpm: 88 },       // pickup + measures 1–7
-          { measure: 9, bpm: 144 },       // pickup + measures 1–7
+          { measure: 1, bpm: 126 },       // pickup + measures 1–7
         ]
       },
       {
@@ -261,10 +281,9 @@
         ],
         // Timeline/tempo for this song:
         beatsPerMeasure: 4,              // set to 3 for 3/4, etc.
-        measuresTotal:   300,
+        measuresTotal:   69,
         tempoMap: [
-          { measure: 1, bpm: 88 },       // pickup + measures 1–7
-          { measure: 9, bpm: 144 },       // pickup + measures 1–7
+          { measure: 1, bpm: 120 },       // pickup + measures 1–7
         ]
       },
       {
@@ -464,61 +483,114 @@
       {
         id: "crows",
         title: "13. Stone the Crows",
-        basePath: "assets/",
+        basePath: "assets/13 Stone the Crows/",
         tracks: [
           { label: "Accompaniment",   file: "13 Stone the Crows Accompaniment.wav" },
+          { label: "Soprano",         file: "13 Stone the Crows Soprano.wav" },
+          { label: "Alto",            file: "13 Stone the Crows Alto.wav" },
         ],
         // Timeline/tempo for this song:
         beatsPerMeasure: 4,              // set to 3 for 3/4, etc.
-        measuresTotal:   300,
+        measuresTotal:   82,
         tempoMap: [
-          { measure: 1, bpm: 88 },       // pickup + measures 1–7
-          { measure: 9, bpm: 144 },       // pickup + measures 1–7
+          { measure: 1,  bpm: 126 },       // pickup + measures 1–7
+          { measure: 78, bpm: 102 },       // pickup + measures 1–7
+          { measure: 80, bpm: 55 },       // pickup + measures 1–7
         ]
       },
       {
         id: "canaan",
         title: "14. Those Canaan Days",
-        basePath: "assets/",
+        basePath: "assets/14 Those Canaan Days/",
         tracks: [
           { label: "Accompaniment",   file: "14 Those Canaan Days Accompaniment.wav" },
+          { label: "Lady Brothers",   file: "14 Those Canaan Days Tenor 1.wav" },
+          { label: "Tenor 2",         file: "14 Those Canaan Days Tenor 2.wav" },
+          { label: "Baritone",        file: "14 Those Canaan Days Baritone.wav" },
+          { label: "Bass",            file: "14 Those Canaan Days Bass.wav" },
+          { label: "Soloists",        file: "14 Those Canaan Days Soloists.wav" },
         ],
         // Timeline/tempo for this song:
-        beatsPerMeasure: 4,              // set to 3 for 3/4, etc.
-        measuresTotal:   300,
+       meterMap: [
+           { measure: 1,    beatsPerMeasure: 3 },              // set to 3 for 3/4, etc.
+           { measure: 81,   beatsPerMeasure: 4 },
+           { measure: 88,   beatsPerMeasure: 3 },
+           { measure: 121,  beatsPerMeasure: 4 },
+           { measure: 162,  beatsPerMeasure: 3 },
+           { measure: 179,  beatsPerMeasure: 4 },              // set to 3 for 3/4, etc.
+           { measure: 183,  beatsPerMeasure: 3 },
+           { measure: 199,  beatsPerMeasure: 4 },
+          ],
+        measuresTotal:   202,
         tempoMap: [
-          { measure: 1, bpm: 88 },       // pickup + measures 1–7
-          { measure: 9, bpm: 144 },       // pickup + measures 1–7
+          { measure: 1,    bpm: 49 },       // pickup + measures 1–7
+          { measure: 13,   bpm: 5 },       // pickup + measures 1–7
+          { measure: 46,   bpm: 92 },       // pickup + measures 1–7
+          { measure: 57,   bpm: 56 },       // pickup + measures 1–7
+          { measure: 87,   bpm: 92 },       // pickup + measures 1–7
+          { measure: 98,   bpm: 56 },       // pickup + measures 1–7
+          { measure: 110,  bpm: 92 },       // pickup + measures 1–7
+          { measure: 120,  bpm: 126 },       // pickup + measures 1–7
+          { measure: 161,  bpm: 96 },       // pickup + measures 1–7
+          { measure: 170,  bpm: 56 },       // pickup + measures 1–7
+          { measure: 182,  bpm: 96 },       // pickup + measures 1–7
+          { measure: 200,  bpm: 98 },       // pickup + measures 1–7
         ]
       },
       {
         id: "brothersgrovel",
         title: "15. The Brothers Come to Egypt Grovel, Grovel",
-        basePath: "assets/",
+        basePath: "assets/15 The Brothers Came to Egypt Grovel, Grovel/",
         tracks: [
           { label: "Accompaniment",   file: "15 The Brothers Come to EgyptGrovel, Grovel Accompaniment.wav" },
+          { label: "Soprano",         file: "15 The Brothers Come to EgyptGrovel, Grovel Soprano.wav" },
+          { label: "Mezzo",           file: "15 The Brothers Come to EgyptGrovel, Grovel Mezzo.wav" },
+          { label: "Alto",            file: "15 The Brothers Come to EgyptGrovel, Grovel Alto.wav" },
+          { label: "Lady Brothers",   file: "15 The Brothers Come to EgyptGrovel, Grovel Tenor.wav" },
+          { label: "Tenor 2",         file: "15 The Brothers Come to EgyptGrovel, Grovel Tenor 2.wav" },
+          { label: "Baritone",        file: "15 The Brothers Come to EgyptGrovel, Grovel Baritone.wav" },
+          { label: "Bass",            file: "15 The Brothers Come to EgyptGrovel, Grovel Bass.wav" },
         ],
         // Timeline/tempo for this song:
-        beatsPerMeasure: 4,              // set to 3 for 3/4, etc.
-        measuresTotal:   300,
+         meterMap: [
+           { measure: 1,    beatsPerMeasure: 4 },              // set to 3 for 3/4, etc.
+           { measure: 40,   beatsPerMeasure: 6 },
+           { measure: 57,   beatsPerMeasure: 3 },
+           { measure: 157,  beatsPerMeasure: 4 },
+          ],
+        measuresTotal:   176,
         tempoMap: [
-          { measure: 1, bpm: 88 },       // pickup + measures 1–7
-          { measure: 9, bpm: 144 },       // pickup + measures 1–7
+          { measure: 1,   bpm: 132 },       // pickup + measures 1–7
+          { measure: 40,  bpm: 324 },       // pickup + measures 1–7
+          { measure: 57,  bpm: 152 },       // pickup + measures 1–7
+          { measure: 156, bpm: 80 },       // pickup + measures 1–7
+          { measure: 167, bpm: 160 },       // pickup + measures 1–7
         ]
       },
       {
         id: "thief",
         title: "16. Who's the Thief",
-        basePath: "assets/",
+        basePath: "assets/16 Who's the Thief/",
         tracks: [
-          { label: "Accompaniment",   file: "16 Who's the Thief Accompaniment.wav" },
+          { label: "Accompaniment",     file: "16 Who's the Thief Accompaniment.wav" },
+          { label: "Soprano + Choir",   file: "16 Who's the Thief Soprano.wav" },
+          { label: "Alto",              file: "16 Who's the Thief Alto.wav" },
+          { label: "Tenor",             file: "16 Who's the Thief Tenor.wav" },
+          { label: "Baritone",          file: "16 Who's the Thief Baritone.wav" },
+          { label: "Bass",              file: "16 Who's the Thief Bass.wav" },
         ],
         // Timeline/tempo for this song:
-        beatsPerMeasure: 4,              // set to 3 for 3/4, etc.
-        measuresTotal:   300,
+        meterMap: [
+           { measure: 1,    beatsPerMeasure: 7 },              // set to 3 for 3/4, etc.
+           { measure: 30,   beatsPerMeasure: 6 },
+           { measure: 43,   beatsPerMeasure: 4 },
+           { measure: 157,  beatsPerMeasure: 4 },
+          ],
+        measuresTotal:   62,
         tempoMap: [
-          { measure: 1, bpm: 88 },       // pickup + measures 1–7
-          { measure: 9, bpm: 144 },       // pickup + measures 1–7
+          { measure: 1,  bpm: 172 },       // pickup + measures 1–7
+          { measure: 30, bpm: 300 },       // pickup + measures 1–7
+          { measure: 43, bpm: 68 },       // pickup + measures 1–7
         ]
       },
       {
