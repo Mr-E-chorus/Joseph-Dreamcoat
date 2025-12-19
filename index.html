@@ -164,6 +164,28 @@
   showAppUI();
   bootstrapSongs();
 }
+    <!-- UI -->
+    <div id="master-wrap" style="display:none; text-align:center; margin: 10px 0 18px;">
+      <label for="master-volume"><strong>Master Volume</strong></label><br/>
+      <input id="master-volume" type="range" min="0" max="1" step="0.01" value="1" style="width:320px;">
+      <span id="master-readout">100%</span>
+    </div>
+    
+    <script>
+    function showAppUI() {
+      document.getElementById("warmups").style.display = "block";
+      document.getElementById("player").style.display = "block";
+      document.getElementById("master-wrap").style.display = "block";
+    
+      document.getElementById("play-pause").addEventListener("click", playPause);
+      document.getElementById("stop").addEventListener("click", stopAll);
+    
+      const changeCodeBtn = document.getElementById("change-code");
+      if (changeCodeBtn) {
+        changeCodeBtn.addEventListener("click", resetPracticeCode);
+      }
+    }
+    </script>
 
     function showAppUI() {
       document.getElementById("song-picker").style.display = "block";
@@ -185,11 +207,6 @@
       const changeCodeBtn = document.getElementById("change-code");
       if (changeCodeBtn) changeCodeBtn.addEventListener("click", resetPracticeCode);
     }
-      <div id="master-wrap" style="display:none; text-align:center; margin: 10px 0 18px;">
-        <label for="master-volume"><strong>Master Volume</strong></label><br/>
-        <input id="master-volume" type="range" min="0" max="1" step="0.01" value="1" style="width:320px;">
-        <span id="master-readout">100%</span>
-      </div>
 
     // --------------- SONG LIBRARY ---------------
     // Add more songs by copying this object and changing fields.
