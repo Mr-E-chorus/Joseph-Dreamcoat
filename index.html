@@ -17,6 +17,11 @@
     #timer { font-weight: 600; text-align:center; }
     #song-picker { display:none; text-align:center; margin: 10px 0; }
     #main-controls { display:none; text-align:center; margin: 12px 0 10px; }
+    <div id="master-wrap" style="display:none; text-align:center; margin: 10px 0 18px;">
+  <label for="master-volume"><strong>Master Volume</strong></label><br/>
+  <input id="master-volume" type="range" min="0" max="1" step="0.01" value="1" style="width:320px;">
+  <span id="master-readout">100%</span>
+</div>
     #play-pause, #stop { padding: 12px 22px; font-size: 1.05rem; border:0; border-radius: 8px; cursor:pointer; margin: 0 6px; }
     #play-pause { background:#16a34a; color:#fff; } #play-pause[disabled]{opacity:.6;cursor:not-allowed}
     #stop { background:#ef4444; color:#fff; } #stop[disabled]{opacity:.6;cursor:not-allowed}
@@ -135,28 +140,27 @@
 
   <script>
     // ---------------- AUTH ----------------
-    const correctPassword = "G0G0Broseph!";
-    const pwRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\w\s]).{12,}$/;
+const correctPassword = "G0G0Broseph!";
+const pwRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\w\s]).{12,}$/;
 
-    window.addEventListener("DOMContentLoaded", () => {
+window.addEventListener("DOMContentLoaded", () => {
   document.getElementById("pw-submit").addEventListener("click", checkPassword);
   document.getElementById("password-input").addEventListener("keydown", (e) => {
     if (e.key === "Enter") checkPassword();
   });
 });
 
-
-    function checkPassword() {
+function checkPassword() {
   const input = (document.getElementById("password-input").value || "").trim();
   const err = document.getElementById("pw-error");
   const ok  = document.getElementById("pw-success");
-  err.style.display = "none"; 
+  err.style.display = "none";
   ok.style.display = "none";
 
-  if (input !== correctPassword) { 
+  if (input !== correctPassword) {
     err.textContent = "Incorrect password.";
-    err.style.display = "block"; 
-    return; 
+    err.style.display = "block";
+    return;
   }
 
   ok.style.display = "block";
@@ -164,49 +168,27 @@
   showAppUI();
   bootstrapSongs();
 }
-    <!-- UI -->
-    <div id="master-wrap" style="display:none; text-align:center; margin: 10px 0 18px;">
-      <label for="master-volume"><strong>Master Volume</strong></label><br/>
-      <input id="master-volume" type="range" min="0" max="1" step="0.01" value="1" style="width:320px;">
-      <span id="master-readout">100%</span>
-    </div>
-    
-    <script>
-    function showAppUI() {
-      document.getElementById("warmups").style.display = "block";
-      document.getElementById("player").style.display = "block";
-      document.getElementById("master-wrap").style.display = "block";
-    
-      document.getElementById("play-pause").addEventListener("click", playPause);
-      document.getElementById("stop").addEventListener("click", stopAll);
-    
-      const changeCodeBtn = document.getElementById("change-code");
-      if (changeCodeBtn) {
-        changeCodeBtn.addEventListener("click", resetPracticeCode);
-      }
-    }
-    </script>
 
-    function showAppUI() {
-      document.getElementById("song-picker").style.display = "block";
-      document.getElementById("main-controls").style.display = "block";
-      document.getElementById("track-title").style.display = "block";
-      document.getElementById("timer").style.display = "block";
-      document.getElementById("timeline").style.display = "block";
-      document.getElementById("jump-controls").style.display = "block";
-      document.getElementById("loop-controls").style.display = "block";
-      document.getElementById("mix-presets").style.display = "block";
-      document.getElementById("practice-stats").style.display = "block";
-      document.getElementById("warmups").style.display = "block";
-      document.getElementById("player").style.display = "block";
-      document.getElementById("master-wrap").style.display = "block";
+function showAppUI() {
+  document.getElementById("song-picker").style.display = "block";
+  document.getElementById("main-controls").style.display = "block";
+  document.getElementById("track-title").style.display = "block";
+  document.getElementById("timer").style.display = "block";
+  document.getElementById("timeline").style.display = "block";
+  document.getElementById("jump-controls").style.display = "block";
+  document.getElementById("loop-controls").style.display = "block";
+  document.getElementById("mix-presets").style.display = "block";
+  document.getElementById("practice-stats").style.display = "block";
+  document.getElementById("warmups").style.display = "block";
+  document.getElementById("player").style.display = "block";
+  document.getElementById("master-wrap").style.display = "block";
 
-      document.getElementById("play-pause").addEventListener("click", playPause);
-      document.getElementById("stop").addEventListener("click", stopAll);
+  document.getElementById("play-pause").addEventListener("click", playPause);
+  document.getElementById("stop").addEventListener("click", stopAll);
 
-      const changeCodeBtn = document.getElementById("change-code");
-      if (changeCodeBtn) changeCodeBtn.addEventListener("click", resetPracticeCode);
-    }
+  const changeCodeBtn = document.getElementById("change-code");
+  if (changeCodeBtn) changeCodeBtn.addEventListener("click", resetPracticeCode);
+}
 
     // --------------- SONG LIBRARY ---------------
     // Add more songs by copying this object and changing fields.
