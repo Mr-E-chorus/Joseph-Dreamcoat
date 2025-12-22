@@ -76,7 +76,13 @@
     <button id="play-pause" disabled>Loading…</button>
     <button id="stop" disabled>Stop</button>
   </div>
-
+  
+  <div id="master_wrap" style="display:none; text-align:center; margin: 10px 0 18px;">
+  <label for="master-volume"><strong>Master Volume</strong></label><br/>
+  <input id="master-volume" type="range" min="0" max="1" step="0.01" value="1" style="width:320px;">
+  <span id="master-readout">100%</span>
+</div>
+  
   <div id="mix-presets">
     <span>Mix presets:</span>
     <button class="btn preset-btn" data-preset="boost">My Part Boosted</button>
@@ -135,28 +141,27 @@
 
   <script>
     // ---------------- AUTH ----------------
-    const correctPassword = "G0G0Broseph!";
-    const pwRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\w\s]).{12,}$/;
+const correctPassword = "G0G0Broseph!";
+const pwRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\w\s]).{12,}$/;
 
-    window.addEventListener("DOMContentLoaded", () => {
+window.addEventListener("DOMContentLoaded", () => {
   document.getElementById("pw-submit").addEventListener("click", checkPassword);
   document.getElementById("password-input").addEventListener("keydown", (e) => {
     if (e.key === "Enter") checkPassword();
   });
 });
 
-
-    function checkPassword() {
+function checkPassword() {
   const input = (document.getElementById("password-input").value || "").trim();
   const err = document.getElementById("pw-error");
   const ok  = document.getElementById("pw-success");
-  err.style.display = "none"; 
+  err.style.display = "none";
   ok.style.display = "none";
 
-  if (input !== correctPassword) { 
+  if (input !== correctPassword) {
     err.textContent = "Incorrect password.";
-    err.style.display = "block"; 
-    return; 
+    err.style.display = "block";
+    return;
   }
 
   ok.style.display = "block";
@@ -165,25 +170,26 @@
   bootstrapSongs();
 }
 
-    function showAppUI() {
-      document.getElementById("song-picker").style.display = "block";
-      document.getElementById("main-controls").style.display = "block";
-      document.getElementById("track-title").style.display = "block";
-      document.getElementById("timer").style.display = "block";
-      document.getElementById("timeline").style.display = "block";
-      document.getElementById("jump-controls").style.display = "block";
-      document.getElementById("loop-controls").style.display = "block";
-      document.getElementById("mix-presets").style.display = "block";
-      document.getElementById("practice-stats").style.display = "block";
-      document.getElementById("warmups").style.display = "block";
-      document.getElementById("player").style.display = "block";
+function showAppUI() {
+  document.getElementById("song-picker").style.display = "block";
+  document.getElementById("main-controls").style.display = "block";
+  document.getElementById("track-title").style.display = "block";
+  document.getElementById("timer").style.display = "block";
+  document.getElementById("timeline").style.display = "block";
+  document.getElementById("jump-controls").style.display = "block";
+  document.getElementById("loop-controls").style.display = "block";
+  document.getElementById("mix-presets").style.display = "block";
+  document.getElementById("practice-stats").style.display = "block";
+  document.getElementById("warmups").style.display = "block";
+  document.getElementById("player").style.display = "block";
+  document.getElementById("master_wrap").style.display = "block";
 
-      document.getElementById("play-pause").addEventListener("click", playPause);
-      document.getElementById("stop").addEventListener("click", stopAll);
+  document.getElementById("play-pause").addEventListener("click", playPause);
+  document.getElementById("stop").addEventListener("click", stopAll);
 
-      const changeCodeBtn = document.getElementById("change-code");
-      if (changeCodeBtn) changeCodeBtn.addEventListener("click", resetPracticeCode);
-    }
+  const changeCodeBtn = document.getElementById("change-code");
+  if (changeCodeBtn) changeCodeBtn.addEventListener("click", resetPracticeCode);
+}
 
     // --------------- SONG LIBRARY ---------------
     // Add more songs by copying this object and changing fields.
@@ -222,6 +228,13 @@
         basePath: "assets/1-2 Prologue to Sons/",
         tracks: [
           { label: "Accompaniment",   file: "1-2 Prologue, Any Dream Will Do, Jacob and Sons Accompaniment.wav" },
+          { label: "Soprano",         file: "1-2 Prologue, Any Dream Will Do, Jacob and Sons Soprano.wav" },
+          { label: "Mezzo",           file: "1-2 Prologue, Any Dream Will Do, Jacob and Sons Mezzo.wav" },
+          { label: "Alto",            file: "1-2 Prologue, Any Dream Will Do, Jacob and Sons Alto.wav" },
+          { label: "Tenor 1",         file: "1-2 Prologue, Any Dream Will Do, Jacob and Sons Tenor 1.wav" },
+          { label: "Tenor 2",         file: "1-2 Prologue, Any Dream Will Do, Jacob and Sons Tenor 2.wav" },
+          { label: "Baritone",        file: "1-2 Prologue, Any Dream Will Do, Jacob and Sons Baritone.wav" },
+          { label: "Bass",            file: "1-2 Prologue, Any Dream Will Do, Jacob and Sons Bass.wav" },
           { label: "Choir 1",         file: "1-2 Prologue, Any Dream Will Do, Jacob and Sons Choir 1.wav" },
           { label: "Choir 2",         file: "1-2 Prologue, Any Dream Will Do, Jacob and Sons Choir 2.wav" },
         ],
@@ -277,8 +290,14 @@
         title: "4. Poor, Poor Joseph",
         basePath: "assets/4 Poor Poor Joseph/",
         tracks: [
-          { label: "Accompaniment",   file: "4 Poor, Poor Joseph Accompaniment.wav" },
-          { label: "Alto 2",          file: "4 Poor, Poor Joseph Alto 2.wav" },
+          { label: "Accompaniment",   file: "4 Poor, Poor Joseph Accompaniment_1.wav" },
+          { label: "Soprano",         file: "4 Poor, Poor Joseph Soprano.wav" },
+          { label: "Mezzo",           file: "4 Poor, Poor Joseph Mezzo.wav" },
+          { label: "Alto",            file: "4 Poor, Poor Joseph Alto 2_1.wav" },
+          { label: "Tenor",           file: "4 Poor, Poor Joseph Tenor.wav" },
+          { label: "Bass",            file: "4 Poor, Poor Joseph Bass.wav" },
+          { label: "Accompaniment",   file: "4 Poor, Poor Joseph Choir 1.wav" },
+          { label: "Accompaniment",   file: "4 Poor, Poor Joseph Choir 2.wav" },          
         ],
         // Timeline/tempo for this song:
         beatsPerMeasure: 4,              // set to 3 for 3/4, etc.
@@ -294,6 +313,9 @@
         tracks: [
           { label: "Accompaniment",   file: "5 One More Angel in Heaven Hoedown Accompaniment.wav" },
           { label: "Lady Brothers",   file: "5 One More Angel in Heaven Hoedown Tenor 1.wav" },
+          { label: "Tenor 2",         file: "5 One More Angel in Heaven Hoedown Tenor 2.wav" },
+          { label: "Baritone",        file: "5 One More Angel in Heaven Hoedown Baritone.wav" },
+          { label: "Bass",            file: "5 One More Angel in Heaven Hoedown Bass.wav" },
         ],
         // Timeline/tempo for this song:
         beatsPerMeasure: 4,              // set to 3 for 3/4, etc.
@@ -742,6 +764,8 @@
     let isPlaying = false;
     let offset = 0;
     let startTime = 0;
+    let masterGain;
+    let compressor;
 
     let currentSong = null;
     let measureStartTimes = [];
@@ -938,6 +962,44 @@
       if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
       const playerDiv = document.getElementById("player");
 
+      if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+      // Create master gain once
+      if (!masterGain) {
+        masterGain = audioContext.createGain();
+        masterGain.gain.value = 1;
+      
+        const masterSlider = document.getElementById("master-volume");
+        const masterReadout = document.getElementById("master-readout");
+      
+        if (masterSlider) {
+          masterSlider.addEventListener("input", () => {
+            const v = parseFloat(masterSlider.value);
+            masterGain.gain.value = v;
+            if (masterReadout) masterReadout.textContent = `${Math.round(v * 100)}%`;
+          });
+        }
+      }
+
+              // Create compressor once
+        if (!compressor) {
+          compressor = audioContext.createDynamicsCompressor();
+        
+          // Good starting point for “gentle limiter”
+          compressor.threshold.value = -10; // dB
+          compressor.knee.value = 0;        // harder knee = more limiter-like
+          compressor.ratio.value = 12;      // high ratio = limiter vibe
+          compressor.attack.value = 0.003;  // seconds (fast catch)
+          compressor.release.value = 0.25;  // seconds
+        }
+        
+        // Connect chain (avoid double-connecting)
+        try { masterGain.disconnect(); } catch(e) {}
+        try { compressor.disconnect(); } catch(e) {}
+        
+        masterGain.connect(compressor);
+        compressor.connect(audioContext.destination);
+
       const partSelect = document.getElementById("my-part-select");
       if (partSelect) partSelect.innerHTML = '<option value="">-- Select --</option>';
 
@@ -1079,7 +1141,7 @@
       sources = channel.map(ch => {
         const src = audioContext.createBufferSource();
         src.buffer = ch.buffer;
-        src.connect(ch.gain).connect(audioContext.destination);
+        src.connect(ch.gain).connect(masterGain);
         src.start(0, offset);
         return src;
       });
