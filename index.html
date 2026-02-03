@@ -273,17 +273,26 @@ function showAppUI() {
       {
         id: "dream",
         title: "3. Joseph's Dreams",
-        basePath: "assets/",
+        basePath: "assets/03 Joseph's Dreams/",
         tracks: [
           { label: "Accompaniment",   file: "3 Joseph's Dreams Accompaniment.wav" },
+          { label: "Soprano",         file: "3 Joseph's Dreams Soprano.wav" },
+          { label: "Mezzo",           file: "3 Joseph's Dreams Mezzo.wav" },
+          { label: "Alto",            file: "3 Joseph's Dreams Alto.wav" },
+          { label: "Tenor 1",         file: "3 Joseph's Dreams Tenor 1.wav" },
+          { label: "Tenor 2",         file: "3 Joseph's Dreams Tenor 2.wav" },
+          { label: "Baritone",        file: "3 Joseph's Dreams Baritone.wav" },
+          { label: "Bass",            file: "3 Joseph's Dreams Bass.wav" },
         ],
-        // Timeline/tempo for this song:
-        beatsPerMeasure: 4,              // set to 3 for 3/4, etc.
-        measuresTotal:   300,
+         meterMap: [
+           { measure: 1,   beatsPerMeasure: 2 },              // set to 3 for 3/4, etc.
+           { measure: 53,  beatsPerMeasure: 4 },
+          ],
+        measuresTotal:   109,
         tempoMap: [
-          { measure: 1, bpm: 88 },       // pickup + measures 1–7
-          { measure: 9, bpm: 144 },       // pickup + measures 1–7
-        ]
+          { measure: 1, bpm: 120 },       // pickup + measures 1–7
+          { measure: 53, bpm: 144 },       // pickup + measures 1–7
+        ],
       },
       {
         id: "ppj",
